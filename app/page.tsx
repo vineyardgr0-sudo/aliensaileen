@@ -1,3 +1,5 @@
+import { Suspense } from "react"
+import LoginToast from "@/components/LoginToast"
 import AuthButton from "@/components/AuthButton"
 import Link from "next/link";
 import { CATEGORIES } from "@/data/categories";
@@ -8,6 +10,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-s0 flex flex-col">
+      <Suspense fallback={null}><LoginToast /></Suspense>
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 border-b border-b-dim bg-s0/95 backdrop-blur-md safe-top">
         <div className="flex items-center justify-between h-12 px-4 max-w-2xl mx-auto">
