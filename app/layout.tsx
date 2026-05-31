@@ -1,4 +1,3 @@
-import NavBar from '@/components/NavBar'
 import type { Metadata, Viewport } from "next";
 import { Syne, DM_Mono } from "next/font/google";
 import "./globals.css";
@@ -46,7 +45,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${syne.variable} ${dmMono.variable}`}>
-      <body><NavBar />{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

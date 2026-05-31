@@ -1,15 +1,15 @@
-'use client'
+"use client"
 
-import { createClient } from '@/lib/supabase'
+import { createClient } from "@/lib/supabase"
 
 export default function AuthButton() {
   const supabase = createClient()
 
   async function handleLogin() {
     await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: "google",
       options: {
-        redirectTo: window.location.origin + '/auth/callback',
+        redirectTo: window.location.origin + "/auth/callback",
       },
     })
   }
@@ -17,7 +17,7 @@ export default function AuthButton() {
   return (
     <button
       onClick={handleLogin}
-      className="font-mono text-[9px] tracking-wider uppercase text-mint border border-mint/30 rounded-full px-2.5 py-1.5 hover:border-mint transition-colors"
+      className="font-mono text-[9px] tracking-wider uppercase bg-mint text-s0 rounded-full px-3 py-1.5 hover:bg-mint/80 transition-colors font-bold"
     >
       Sign in
     </button>
