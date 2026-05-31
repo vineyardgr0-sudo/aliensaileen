@@ -1,3 +1,4 @@
+import AuthButton from "@/components/AuthButton"
 import Link from "next/link";
 import { CATEGORIES } from "@/data/categories";
 import { Badge } from "@/components/ui/Badge";
@@ -15,6 +16,7 @@ export default function HomePage() {
           </span>
           <div className="flex items-center gap-3">
             <Badge variant="mint">{liveCount} live</Badge>
+            <AuthButton />
             <Link href="/dashboard" className="font-mono text-[9px] tracking-wider uppercase text-t300 hover:text-mint transition-colors">
               My progress
             </Link>
