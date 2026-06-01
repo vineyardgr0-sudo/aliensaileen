@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Syne, DM_Mono } from "next/font/google";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 
 const syne = Syne({
@@ -43,9 +44,13 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+
   return (
     <html lang="en" className={`${syne.variable} ${dmMono.variable}`}>
       <body>{children}</body>
+      {gaId && <GoogleAnalytics gaId={gaId} />}
     </html>
   );
 }
+
