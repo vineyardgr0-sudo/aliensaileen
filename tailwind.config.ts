@@ -9,21 +9,21 @@ const config: Config = {
         mono: ["var(--font-dm-mono)", "monospace"],
       },
       colors: {
-        ink:    "#0c0c0e",
+        ink:    "#050507",
         mint:   "#00e5b4",
         violet: "#7c3aed",
         acid:   "#c8ff00",
-        s0: "#0c0c0e",
-        s1: "#111113",
-        s2: "#18181b",
-        s3: "#1f1f24",
-        t100: "#e8e6e0",
-        t200: "rgba(232,230,224,0.65)",
-        t300: "rgba(232,230,224,0.40)",
-        t400: "rgba(232,230,224,0.22)",
-        "b-dim": "rgba(255,255,255,0.06)",
-        "b-mid": "rgba(255,255,255,0.10)",
-        "b-hi":  "rgba(255,255,255,0.16)",
+        s0: "#050507", // Pure dark canvas background
+        s1: "#0f0f12", // Surface 1
+        s2: "#161619", // Surface 2
+        s3: "#222226", // Surface 3
+        t100: "#ffffff", // Pure white headlines
+        t200: "rgba(255, 255, 255, 0.85)", // Readable body
+        t300: "rgba(255, 255, 255, 0.50)", // Secondary text
+        t400: "rgba(255, 255, 255, 0.30)", // Muted tags / details
+        "b-dim": "rgba(255, 255, 255, 0.06)", // Soft border
+        "b-mid": "rgba(255, 255, 255, 0.12)", // Mid border
+        "b-hi":  "rgba(255, 255, 255, 0.20)", // Highlighted border
       },
       borderRadius: {
         "2xl": "16px",

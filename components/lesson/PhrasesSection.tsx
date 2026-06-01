@@ -2,15 +2,15 @@ import type { PhraseItem } from "@/types/lesson";
 export default function PhrasesSection({ items }: { items: PhraseItem[] }) {
   if (!items?.length) return null;
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       {items.map((item, i) => (
-        <div key={i} className="bg-white/[0.025] border border-b-dim rounded-xl p-3">
-          <p className="font-syne text-[13px] font-bold text-t100 mb-0.5">{item.korean}</p>
-          {item.pronunciation && <p className="font-mono text-[7.5px] text-mint/45 mb-1">{item.pronunciation}</p>}
-          <p className="font-mono text-[9px] text-t300 mb-2.5">{item.english}</p>
-          <div className="border-t border-b-dim pt-2">
-            <p className="font-mono text-[8px] text-t400 leading-[1.6]">
-              <span className="text-mint/45 mr-1">Why it works →</span>{item.why_it_works}
+        <div key={i} className="bg-white/[0.02] border border-[rgba(255,255,255,0.08)] rounded-2xl p-4.5 shadow-sm animate-fade-up">
+          <p className="font-syne text-[15px] font-bold text-t100 mb-1">{item.korean}</p>
+          {item.pronunciation && <p className="font-mono text-[10px] text-mint/60 mb-1.5">[{item.pronunciation}]</p>}
+          <p className="font-mono text-xs text-t200 mb-3">{item.english}</p>
+          <div className="border-t border-[rgba(255,255,255,0.07)] pt-2.5">
+            <p className="font-mono text-[10px] text-t300 leading-relaxed">
+              <span className="text-mint/60 mr-1.5 font-bold">Why it works →</span>{item.why_it_works}
             </p>
           </div>
         </div>

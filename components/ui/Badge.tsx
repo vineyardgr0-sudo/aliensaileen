@@ -19,7 +19,7 @@ interface Props {
 export function Badge({ children, variant = "dim", className }: Props) {
   return (
     <span className={cn(
-      "inline-flex items-center font-mono text-[7.5px] tracking-[0.14em] uppercase px-2 py-1 rounded-full border",
+      "inline-flex items-center font-mono text-[10px] tracking-[0.08em] uppercase px-3 py-1.5 rounded-full border font-bold",
       VARIANTS[variant],
       className
     )}>

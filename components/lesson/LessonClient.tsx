@@ -88,24 +88,24 @@ export default function LessonClient({ lesson }: Props) {
       <Nav
         left={<BackButton href={catPath} label="Lessons" />}
         right={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={toggleBookmark}
               aria-label={isBookmarked ? "Remove bookmark" : "Bookmark lesson"}
-              className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
+              className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${
                 isBookmarked
-                  ? "border-mint/40 bg-mint/10 text-mint"
-                  : "border-b-dim text-t400 hover:border-b-mid hover:text-t100"
+                  ? "border-mint/45 bg-mint/10 text-mint"
+                  : "border-[rgba(255,255,255,0.12)] text-t400 hover:border-mint/30 hover:text-t100"
               }`}
             >
-              <svg width="12" height="12" viewBox="0 0 12 12"
+              <svg width="14" height="14" viewBox="0 0 12 12"
                 fill={isBookmarked ? "currentColor" : "none"}
                 stroke="currentColor" strokeWidth="1.3"
                 strokeLinecap="round" strokeLinejoin="round">
                 <path d="M2 2h8v9L6 8.5 2 11V2z"/>
               </svg>
             </button>
-            <span className="font-mono text-[9px] text-mint/40 tracking-wider">{lesson.meta.id}</span>
+            <span className="font-mono text-[10px] text-mint/50 tracking-wider font-bold">{lesson.meta.id}</span>
           </div>
         }
       />
@@ -117,15 +117,15 @@ export default function LessonClient({ lesson }: Props) {
 
       <div className="max-w-2xl mx-auto">
         {/* LESSON HEADER */}
-        <div className="px-5 py-5 border-b border-b-dim">
-          <div className="flex gap-2 flex-wrap mb-3">
+        <div className="px-5 py-6 border-b border-[rgba(255,255,255,0.07)]">
+          <div className="flex gap-2.5 flex-wrap mb-4">
             <Badge variant="mint">{lesson.meta.category.replace(/_/g, " ")}</Badge>
             <Badge variant="violet">Lesson {String(lesson.meta.lesson_number).padStart(2, "0")}</Badge>
             <Badge variant="dim">{lesson.meta.level} · ~{lesson.meta.estimated_minutes}min</Badge>
             {showComplete && <Badge variant="success">Completed ✓</Badge>}
           </div>
-          <h1 className="font-syne text-xl font-extrabold leading-snug mb-2">{lesson.title}</h1>
-          <p className="font-mono text-[8.5px] text-t300 leading-relaxed">
+          <h1 className="font-display-md mb-2.5">{lesson.title}</h1>
+          <p className="font-mono text-xs text-t300 leading-relaxed">
             {lesson.context.location} · {lesson.context.interaction_time} · {lesson.context.communication_style}
           </p>
         </div>
@@ -135,7 +135,7 @@ export default function LessonClient({ lesson }: Props) {
         </Section>
 
         <Section label="02 — Select relationship — all content below adapts" delay={40}>
-          <p className="font-syne text-[13px] font-bold text-t100/85 mb-3">{lesson.relationship_selection.title}</p>
+          <p className="font-headline text-[15px] font-bold text-t100/90 mb-4">{lesson.relationship_selection.title}</p>
           <RelationshipSelector
             options={lesson.relationship_selection.options}
             selected={selectedRel}
@@ -174,22 +174,22 @@ export default function LessonClient({ lesson }: Props) {
 
         {/* COMPLETE BANNER */}
         {showComplete && (
-          <div className="mx-5 my-5 px-5 py-5 rounded-2xl bg-mint/[0.07] border border-mint/22 text-center animate-scale-in">
-            <div className="w-12 h-12 rounded-full bg-mint/15 border border-mint/30 flex items-center justify-center mx-auto mb-3">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M4 10l4.5 4.5L16 6" stroke="#00e5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <div className="mx-5 my-6 px-6 py-6 rounded-2xl bg-mint/[0.04] border border-mint/25 text-center animate-scale-in shadow-sm">
+            <div className="w-14 h-14 rounded-full bg-mint/15 border border-mint/30 flex items-center justify-center mx-auto mb-4">
+              <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+                <path d="M4 10l4.5 4.5L16 6" stroke="#00e5b4" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <p className="font-syne text-base font-extrabold text-mint mb-1">Lesson complete</p>
-            <p className="font-mono text-[9px] text-t300 leading-relaxed mb-4">
+            <p className="font-syne text-lg font-extrabold text-mint mb-1.5">Lesson complete</p>
+            <p className="font-mono text-xs text-t300 leading-relaxed mb-5">
               {quizScore > 0 && `Quiz score: ${Math.round(quizScore * 100)}% · `}
               {lesson.meta.category.replace(/_/g, " ")} · {lesson.title}
             </p>
-            <div className="flex gap-2 justify-center">
-              <Link href={catPath} className="font-mono text-[9px] tracking-wider uppercase px-4 py-2 rounded-full bg-mint/10 border border-mint/30 text-mint hover:bg-mint/20 transition-all">
+            <div className="flex gap-3 justify-center">
+              <Link href={catPath} className="font-mono text-[10.5px] tracking-wider uppercase px-5 py-3 rounded-full bg-mint/10 border border-mint/30 text-mint font-bold hover:bg-mint/20 transition-all min-h-[40px] flex items-center justify-center">
                 Next lesson →
               </Link>
-              <Link href="/dashboard" className="font-mono text-[9px] tracking-wider uppercase px-4 py-2 rounded-full border border-b-mid text-t300 hover:text-t100 transition-all">
+              <Link href="/dashboard" className="font-mono text-[10.5px] tracking-wider uppercase px-5 py-3 rounded-full border border-[rgba(255,255,255,0.12)] text-t300 font-bold hover:text-t100 hover:bg-white/[0.03] transition-all min-h-[40px] flex items-center justify-center">
                 Dashboard
               </Link>
             </div>
@@ -197,11 +197,11 @@ export default function LessonClient({ lesson }: Props) {
         )}
 
         {/* ACTIONS */}
-        <div className="flex gap-2 justify-center px-5 pt-4 pb-12">
-          <button onClick={handleReset} className="font-mono text-[8px] tracking-wider uppercase px-4 py-2 rounded-full border border-b-dim text-t400 hover:border-b-mid hover:text-t100 transition-all">
+        <div className="flex gap-3 justify-center px-5 pt-6 pb-16">
+          <button onClick={handleReset} className="font-mono text-[10px] tracking-wider uppercase px-4.5 py-2.5 rounded-full border border-[rgba(255,255,255,0.12)] text-t300 hover:text-t100 hover:bg-white/[0.03] transition-all min-h-[38px]">
             Reset lesson
           </button>
-          <Link href={catPath} className="font-mono text-[8px] tracking-wider uppercase px-4 py-2 rounded-full border border-b-dim text-t400 hover:text-t100 transition-all">
+          <Link href={catPath} className="font-mono text-[10px] tracking-wider uppercase px-4.5 py-2.5 rounded-full border border-[rgba(255,255,255,0.12)] text-t300 hover:text-t100 hover:bg-white/[0.03] transition-all min-h-[38px] flex items-center">
             Back to lessons
           </Link>
         </div>
@@ -212,8 +212,8 @@ export default function LessonClient({ lesson }: Props) {
 
 function Section({ label, children, delay }: { label: string; children: React.ReactNode; delay: number }) {
   return (
-    <div className="px-5 py-5 border-b border-b-dim animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
-      <p className="font-mono text-[7.5px] tracking-[0.2em] uppercase text-t400 mb-3">{label}</p>
+    <div className="px-5 py-6 border-b border-[rgba(255,255,255,0.07)] animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
+      <p className="font-caption text-t400 mb-4">{label}</p>
       {children}
     </div>
   );

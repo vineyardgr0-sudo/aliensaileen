@@ -35,13 +35,13 @@ export default function QuizSection({ items, onComplete }: Props) {
   if (!items?.length) return null;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3.5">
       {items.map((item, i) => (
-        <div key={i} className="bg-s2 border border-b-dim rounded-xl p-4">
-          <p className="font-syne text-[11px] font-bold text-t200 mb-3 leading-snug">{item.question}</p>
-          <div className="flex items-center gap-2 flex-wrap">
+        <div key={i} className="bg-s1 border border-[rgba(255,255,255,0.08)] rounded-2xl p-5 shadow-sm animate-fade-up">
+          <p className="font-syne text-[13px] font-bold text-t200 mb-3.5 leading-snug">{item.question}</p>
+          <div className="flex items-center gap-3 flex-wrap">
             {item.prefix && (
-              <span className="font-syne text-[13px] font-bold text-t300">{item.prefix}</span>
+              <span className="font-syne text-[15px] font-extrabold text-t100">{item.prefix}</span>
             )}
             <input
               type="text"
@@ -51,26 +51,26 @@ export default function QuizSection({ items, onComplete }: Props) {
               }}
               disabled={checked[i]}
               placeholder={"_".repeat(item.answer.length)}
-              className={`font-mono text-[12px] px-2.5 py-1.5 rounded-lg border outline-none min-w-[80px] transition-all bg-s1 text-t100 ${
-                states[i] === "correct" ? "border-mint/55 bg-mint/[0.07] text-mint"
+              className={`font-mono text-sm px-4 py-2 rounded-xl border outline-none min-w-[100px] transition-all bg-s2 text-t100 min-h-[40px] ${
+                states[i] === "correct" ? "border-mint/55 bg-mint/[0.07] text-mint font-bold"
                 : states[i] === "wrong" ? "border-red-500/40 bg-red-500/[0.06] text-red-400/85"
-                : "border-b-mid focus:border-mint/40"
+                : "border-[rgba(255,255,255,0.12)] focus:border-mint/50"
               }`}
             />
             {item.suffix && (
-              <span className="font-syne text-[13px] font-bold text-t300">{item.suffix}</span>
+              <span className="font-syne text-[15px] font-extrabold text-t100">{item.suffix}</span>
             )}
             {!checked[i] && (
               <button
                 onClick={() => check(i)}
-                className="font-mono text-[7.5px] tracking-wider uppercase px-3 py-1.5 rounded-lg bg-mint/[0.1] border border-mint/30 text-mint hover:bg-mint/[0.18] transition-all"
+                className="font-mono text-[10px] tracking-wider uppercase px-4 py-2 rounded-xl bg-mint text-s0 font-bold hover:bg-mint/90 hover:shadow-[0_0_10px_rgba(0,229,180,0.25)] transition-all min-h-[40px]"
               >
                 Check
               </button>
             )}
           </div>
           {checked[i] && (
-            <p className={`font-mono text-[9px] mt-2 ${states[i] === "correct" ? "text-mint/75" : "text-red-400/75"}`}>
+            <p className={`font-mono text-[11px] font-bold mt-3 ${states[i] === "correct" ? "text-mint" : "text-red-400"}`}>
               {states[i] === "correct" ? `✓ Correct — ${item.answer}` : `✗ Answer: ${item.answer}`}
             </p>
           )}

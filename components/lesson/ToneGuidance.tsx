@@ -9,27 +9,27 @@ export default function ToneGuidance({ guidance }: { guidance: TG }) {
   const pos = rec?.position ?? 50;
   return (
     <div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2.5">
         {ROWS.map(({ key, label, cls }) => (
-          <div key={key} className={`flex items-start gap-3 rounded-lg px-3 py-2.5 border ${cls.card}`}>
-            <span className={`font-mono text-[7px] tracking-wider uppercase px-2 py-0.5 rounded-lg flex-shrink-0 mt-0.5 ${cls.pill}`}>{label}</span>
-            <p className={`font-mono text-[9px] leading-[1.65] ${cls.text}`}>{guidance[key]}</p>
+          <div key={key} className={`flex items-start gap-4.5 rounded-2xl px-4 py-3 border ${cls.card} animate-fade-up`}>
+            <span className={`font-mono text-[9px] tracking-wider uppercase px-2.5 py-0.5 rounded-full flex-shrink-0 mt-0.5 font-bold ${cls.pill}`}>{label}</span>
+            <p className={`font-mono text-xs leading-relaxed ${cls.text}`}>{guidance[key]}</p>
           </div>
         ))}
       </div>
-      <div className="mt-2.5 bg-white/[0.025] border border-b-dim rounded-lg px-3 py-2.5">
-        <p className="font-mono text-[8.5px] text-t400 leading-[1.7]">{guidance.tone_summary}</p>
+      <div className="mt-3.5 bg-white/[0.02] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4.5 py-3.5 animate-fade-up">
+        <p className="font-mono text-xs text-t200 leading-relaxed">{guidance.tone_summary}</p>
       </div>
       {guidance.spectrum && (
-        <div className="mt-2.5 bg-white/[0.02] border border-b-dim rounded-lg px-3 py-3">
-          <p className="font-mono text-[7px] tracking-[0.18em] uppercase text-t400 mb-2">Formality spectrum</p>
-          <div className="relative h-1 bg-white/[0.08] rounded-full my-3">
+        <div className="mt-3.5 bg-white/[0.02] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4.5 py-4 animate-fade-up">
+          <p className="font-caption text-t400 mb-3">Formality spectrum</p>
+          <div className="relative h-1.5 bg-white/[0.08] rounded-full my-4">
             <div className="absolute h-full bg-mint/40 rounded-full" style={{ width: `${pos}%` }} />
-            <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-mint border-2 border-s0" style={{ left: `${pos}%` }} />
+            <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-mint border-2 border-s0" style={{ left: `${pos}%` }} />
           </div>
           <div className="flex justify-between">
             {guidance.spectrum.map((s) => (
-              <span key={s.label} className={`font-mono text-[7.5px] ${s.recommended ? "text-mint" : "text-t400"}`}>{s.label}</span>
+              <span key={s.label} className={`font-mono text-[9px] font-medium ${s.recommended ? "text-mint font-bold" : "text-t400"}`}>{s.label}</span>
             ))}
           </div>
         </div>
