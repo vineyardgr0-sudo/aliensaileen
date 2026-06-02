@@ -24,7 +24,10 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
+  const url = new URL(request.url)
+  const isFirstLesson = url.pathname === '/learn/fan_meeting/FM_001'
+
+  if (!user && !isFirstLesson) {
     return NextResponse.redirect(new URL('/?message=login_required', request.url))
   }
 

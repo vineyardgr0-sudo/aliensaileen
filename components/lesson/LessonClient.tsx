@@ -15,6 +15,8 @@ import ToneGuidance from "./ToneGuidance";
 import QuizSection from "./QuizSection";
 import { Nav, BackButton } from "@/components/ui/Nav";
 import { Badge } from "@/components/ui/Badge";
+import { createClient } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 interface Props { lesson: Lesson }
 
@@ -28,11 +30,33 @@ export default function LessonClient({ lesson }: Props) {
   const [quizScore, setQuizScore] = useState(0);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [step, setStep] = useState(0);
   const startTimeRef = useRef(Date.now());
 
   const { lp, refresh } = useLessonProgress(lesson.meta.id);
   const catPath = `/learn/${lesson.meta.category}`;
+
+  // Track auth state
+  useEffect(() => {
+    const supabase = createClient();
+    async function getSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    }
+    getSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Sync bookmark + completed state after mount (avoids hydration mismatch)
   useEffect(() => {
@@ -78,6 +102,16 @@ export default function LessonClient({ lesson }: Props) {
     const next = progressStore.toggleBookmark(lesson.meta.id);
     setIsBookmarked(next);
     refresh();
+  }
+
+  async function handleLogin() {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + "/auth/callback",
+      },
+    });
   }
 
   const currentRel = lesson.relationship_selection.options.find((o) => o.id === selectedRel)!;
@@ -143,30 +177,74 @@ export default function LessonClient({ lesson }: Props) {
       <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-5 py-8 justify-between">
         
         {showComplete ? (
-          /* COMPLETE BANNER */
-          <div className="my-auto px-6 py-8 rounded-3xl bg-mint/[0.03] border border-mint/20 text-center animate-scale-in shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-            <div className="w-16 h-16 rounded-full bg-mint/15 border border-mint/30 flex items-center justify-center mx-auto mb-4 hover:scale-105 transition-transform">
-              <svg width="28" height="28" viewBox="0 0 20 20" fill="none">
-                <path d="M4 10l4.5 4.5L16 6" stroke="#00e5b4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+          authLoading ? (
+            <div className="my-auto px-6 py-8 rounded-3xl bg-white/[0.02] border border-[rgba(255,255,255,0.08)] text-center animate-pulse min-h-[300px] flex items-center justify-center">
+              <div className="font-mono text-xs text-t400">Loading progress...</div>
             </div>
-            <p className="font-syne text-2xl font-extrabold text-mint mb-2">Lesson complete!</p>
-            <p className="font-mono text-xs text-t300 leading-relaxed mb-6 max-w-sm mx-auto">
-              {quizScore > 0 && `You scored ${Math.round(quizScore * 100)}% on the quiz! · `}
-              {lesson.meta.category.replace(/_/g, " ")} · {lesson.title}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href={catPath} className="font-mono text-xs tracking-wider uppercase px-6 py-3.5 rounded-full bg-mint text-s0 font-extrabold hover:bg-mint/90 active:scale-[0.98] hover:shadow-[0_0_15px_rgba(0,229,180,0.3)] transition-all min-h-[46px] flex items-center justify-center">
-                Next lesson →
-              </Link>
-              <Link href="/dashboard" className="font-mono text-xs tracking-wider uppercase px-6 py-3.5 rounded-full border border-[rgba(255,255,255,0.12)] text-t300 font-bold hover:text-t100 hover:bg-white/[0.03] transition-all min-h-[46px] flex items-center justify-center">
-                My Dashboard
-              </Link>
-              <button onClick={handleReset} className="font-mono text-xs tracking-wider uppercase px-6 py-3.5 rounded-full border border-[rgba(255,255,255,0.12)] text-t300 font-bold hover:text-t100 hover:bg-white/[0.03] transition-all min-h-[46px] flex items-center justify-center">
-                Reset & replay
-              </button>
+          ) : !user ? (
+            /* SIGN IN GATE */
+            <div className="my-auto px-6 py-8 rounded-3xl bg-white/[0.02] border border-[rgba(255,255,255,0.08)] text-center animate-scale-in shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative overflow-hidden">
+              <div className="absolute -top-12 -left-12 w-32 h-32 bg-mint/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-violet/10 rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="w-16 h-16 rounded-full bg-mint/15 border border-mint/30 flex items-center justify-center mx-auto mb-4 hover:scale-105 transition-transform">
+                <svg width="28" height="28" viewBox="0 0 20 20" fill="none">
+                  <path d="M4 10l4.5 4.5L16 6" stroke="#00e5b4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <p className="font-syne text-2xl font-extrabold text-mint mb-2">Lesson complete!</p>
+              <p className="font-mono text-xs text-t300 leading-relaxed mb-6 max-w-sm mx-auto">
+                {quizScore > 0 && `You scored ${Math.round(quizScore * 100)}% on the quiz! · `}
+                {lesson.meta.category.replace(/_/g, " ")} · {lesson.title}
+              </p>
+              
+              <hr className="border-[rgba(255,255,255,0.06)] my-6 max-w-md mx-auto" />
+              
+              <h3 className="font-headline text-lg text-t100 mb-2">
+                Ready to learn more?
+              </h3>
+              <p className="font-body-sm text-t300 max-w-md mx-auto mb-6 leading-relaxed">
+                Sign in to unlock all other scenarios, track your progress, bookmark expressions, and access the personalized dashboard.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  onClick={handleLogin}
+                  className="font-mono text-xs tracking-wider uppercase px-6 py-3.5 rounded-full bg-mint text-s0 font-extrabold hover:bg-mint/90 active:scale-[0.98] hover:shadow-[0_0_15px_rgba(0,229,180,0.3)] transition-all min-h-[46px] flex items-center justify-center"
+                >
+                  Sign in to continue
+                </button>
+                <button onClick={handleReset} className="font-mono text-xs tracking-wider uppercase px-6 py-3.5 rounded-full border border-[rgba(255,255,255,0.12)] text-t300 font-bold hover:text-t100 hover:bg-white/[0.03] transition-all min-h-[46px] flex items-center justify-center">
+                  Reset & replay
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* COMPLETE BANNER */
+            <div className="my-auto px-6 py-8 rounded-3xl bg-mint/[0.03] border border-mint/20 text-center animate-scale-in shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+              <div className="w-16 h-16 rounded-full bg-mint/15 border border-mint/30 flex items-center justify-center mx-auto mb-4 hover:scale-105 transition-transform">
+                <svg width="28" height="28" viewBox="0 0 20 20" fill="none">
+                  <path d="M4 10l4.5 4.5L16 6" stroke="#00e5b4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <p className="font-syne text-2xl font-extrabold text-mint mb-2">Lesson complete!</p>
+              <p className="font-mono text-xs text-t300 leading-relaxed mb-6 max-w-sm mx-auto">
+                {quizScore > 0 && `You scored ${Math.round(quizScore * 100)}% on the quiz! · `}
+                {lesson.meta.category.replace(/_/g, " ")} · {lesson.title}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link href={catPath} className="font-mono text-xs tracking-wider uppercase px-6 py-3.5 rounded-full bg-mint text-s0 font-extrabold hover:bg-mint/90 active:scale-[0.98] hover:shadow-[0_0_15px_rgba(0,229,180,0.3)] transition-all min-h-[46px] flex items-center justify-center">
+                  Next lesson →
+                </Link>
+                <Link href="/dashboard" className="font-mono text-xs tracking-wider uppercase px-6 py-3.5 rounded-full border border-[rgba(255,255,255,0.12)] text-t300 font-bold hover:text-t100 hover:bg-white/[0.03] transition-all min-h-[46px] flex items-center justify-center">
+                  My Dashboard
+                </Link>
+                <button onClick={handleReset} className="font-mono text-xs tracking-wider uppercase px-6 py-3.5 rounded-full border border-[rgba(255,255,255,0.12)] text-t300 font-bold hover:text-t100 hover:bg-white/[0.03] transition-all min-h-[46px] flex items-center justify-center">
+                  Reset & replay
+                </button>
+              </div>
+            </div>
+          )
         ) : (
           /* STEP CARD WIZARD */
           <div className="flex-1 flex flex-col justify-between">
