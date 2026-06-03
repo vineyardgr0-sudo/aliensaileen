@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Syne, DM_Mono } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import "./globals.css";
 
 const syne = Syne({
@@ -48,7 +49,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="en" className={`${syne.variable} ${dmMono.variable}`}>
-      <body>{children}</body>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0a0a0a" />
+      </head>
+      <body>
+        {children}
+        <ServiceWorkerRegistration />
+      </body>
       {gaId && <GoogleAnalytics gaId={gaId} />}
     </html>
   );

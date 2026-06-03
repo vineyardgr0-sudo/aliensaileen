@@ -1,0 +1,368 @@
+{
+  "meta": {
+    "id": "FM_001",
+    "category": "fan_meeting",
+    "lesson_number": 1,
+    "level": "beginner",
+    "topic": "first_greeting",
+    "status": "live",
+    "estimated_minutes": 8
+  },
+  "title": "First Greeting at a BTS Fan Meeting",
+  "context": {
+    "description": "You are at a BTS fan sign event in Seoul. Seated in front of RM or V. The interaction window is 3–5 seconds. You want your first words to feel genuine — not scripted, not overly formal, just real.",
+    "location": "Fan sign event, Seoul",
+    "interaction_time": "3–5 seconds",
+    "communication_style": "Warm, polite, emotionally direct",
+    "goal": [
+      "Greet naturally without sounding scripted",
+      "Express appreciation in the right register",
+      "Leave a genuine impression in a short window"
+    ],
+    "cultural_note": "해요체 is the sweet spot at fan meetings. 반말 reads as presumptuous. 습니다체 sounds like a press conference. Emotional warmth lives in the middle register."
+  },
+  "relationship_selection": {
+    "title": "Who are you speaking to today?",
+    "description": "Select the member. Every section below adapts to match their communication style.",
+    "options": [
+      {
+        "id": "rm_intp",
+        "label": "RM (Nam-joon)",
+        "summary": "INTP · Leader · Thoughtful and sincere",
+        "communication_traits": ["thoughtful", "calm", "sincere", "intellectual"],
+        "archetype": "reflective_intellectual"
+      },
+      {
+        "id": "rm_infp",
+        "label": "V (Tae-hyung)",
+        "summary": "INFP · Artist · Expressive and emotional",
+        "communication_traits": ["expressive", "playful", "emotional", "artistic"],
+        "archetype": "expressive_artist"
+      }
+    ]
+  },
+  "decision_point": {
+    "variants": {
+      "rm_intp": {
+        "question": "You want to tell RM you respect him. Which sounds most natural at this fan meeting?",
+        "options": [
+          {
+            "text": "존경하고 있습니다",
+            "tag": "wrong",
+            "feedback": "Too formal — sounds like a speech",
+            "explanation": {
+              "title": "습니다체 sounds like a press conference",
+              "description": "This uses 격식체 (formal register), which creates emotional distance. At a fan meeting, this makes you sound like you're presenting a report — not connecting with a person.",
+              "details": [
+                "습니다 ending = official/stiff register",
+                "Emotionally distant for a personal interaction",
+                "Sounds scripted, not genuine"
+              ],
+              "natural_alternative": ["존경해요", "정말 존경해요"],
+              "formality_analysis": {
+                "used": "습니다체",
+                "why_wrong": "Too official for an intimate, brief personal moment",
+                "recommended": "해요체"
+              }
+            }
+          },
+          {
+            "text": "존경해요",
+            "tag": "correct",
+            "feedback": "Natural — warm and respectful. The right register."
+          },
+          {
+            "text": "존경함",
+            "tag": "wrong",
+            "feedback": "Too abrupt — noun-form drop sounds like a text message",
+            "explanation": {
+              "title": "Noun-form drop is blunt in spoken Korean",
+              "description": "'존경함' is a written/noun form. Face-to-face, it reads as flat and emotionally absent — missing the warmth a full sentence carries.",
+              "details": [
+                "Noun drop is abrupt in spoken Korean",
+                "Feels like labeling, not expressing",
+                "Missing emotional register entirely"
+              ],
+              "natural_alternative": ["존경해요", "진심으로 존경해요"],
+              "formality_analysis": {
+                "used": "반말",
+                "why_wrong": "Noun-drop omits the relational warmth of a verb ending",
+                "recommended": "해요체"
+              }
+            }
+          }
+        ]
+      },
+      "rm_infp": {
+        "question": "You want to tell V he looks amazing today. Which sounds most natural?",
+        "options": [
+          {
+            "text": "오늘 정말 멋있어요",
+            "tag": "correct",
+            "feedback": "Natural — direct warmth, exactly the right register."
+          },
+          {
+            "text": "오늘 외모가 매우 훌륭하십니다",
+            "tag": "wrong",
+            "feedback": "Too stiff — reads like a formal evaluation, not a compliment",
+            "explanation": {
+              "title": "훌륭하십니다 is for institutions, not people",
+              "description": "This uses clinical honorific register. It sounds like a performance review — not a fan meeting moment. V responds to genuine warmth, not formal assessment.",
+              "details": [
+                "훌륭 implies institutional-level evaluation",
+                "하십니다 creates formal, cold distance",
+                "V's communication style is warm and expressive — match it"
+              ],
+              "natural_alternative": ["오늘 정말 멋있어요", "진짜 잘생겼어요"],
+              "formality_analysis": {
+                "used": "습니다체",
+                "why_wrong": "Formal register is emotionally cold for this context",
+                "recommended": "해요체"
+              }
+            }
+          },
+          {
+            "text": "오늘 멋있다",
+            "tag": "neutral",
+            "feedback": "Understandable — but too casual for a first meeting",
+            "explanation": {
+              "title": "반말 assumes a closeness you don't have yet",
+              "description": "멋있다 is casual speech for close friends. At a fan meeting, this can feel presumptuous — even if unintentional, it shifts the social dynamic.",
+              "details": [
+                "반말 implies existing intimacy or lower social rank",
+                "Can read as disrespectful without that established context",
+                "V might respond warmly, but it's a social risk"
+              ],
+              "natural_alternative": ["오늘 정말 멋있어요", "와, 진짜 멋있어요"],
+              "formality_analysis": {
+                "used": "반말",
+                "why_wrong": "Too casual for a first-time fan meeting interaction",
+                "recommended": "해요체"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "vocabulary": {
+    "rm_intp": [
+      {
+        "word": "존경",
+        "pronunciation": "/jon·gyeong/",
+        "meaning": "Respect",
+        "usage": "Deep admiration — emotionally sincere. 존경해요 in 해요체.",
+        "formality": "해요체"
+      },
+      {
+        "word": "진심",
+        "pronunciation": "/jin·sim/",
+        "meaning": "Sincerity / true heart",
+        "usage": "Adds emotional depth. 진심으로 = sincerely."
+      },
+      {
+        "word": "팬",
+        "pronunciation": "/paen/",
+        "meaning": "Fan",
+        "usage": "Identifying yourself — warm and direct. 팬이에요."
+      },
+      {
+        "word": "반갑다",
+        "pronunciation": "/ban·gap·da/",
+        "meaning": "Glad / pleased to meet",
+        "usage": "Opening greeting. Use 반가워요 in 해요체.",
+        "formality": "해요체"
+      }
+    ],
+    "rm_infp": [
+      {
+        "word": "멋있다",
+        "pronunciation": "/meot·it·da/",
+        "meaning": "Cool / amazing",
+        "usage": "General admiration. Use 멋있어요 in polite form.",
+        "formality": "해요체"
+      },
+      {
+        "word": "진짜",
+        "pronunciation": "/jin·jja/",
+        "meaning": "Really / genuinely",
+        "usage": "Stronger emotional emphasis than 정말 in casual 해요체."
+      },
+      {
+        "word": "응원",
+        "pronunciation": "/eung·won/",
+        "meaning": "Support / cheering",
+        "usage": "Long-term fan loyalty. 응원할게요."
+      },
+      {
+        "word": "잘생기다",
+        "pronunciation": "/jal·saeng·gi·da/",
+        "meaning": "Good-looking",
+        "usage": "Direct appearance compliment. Use 잘생겼어요.",
+        "formality": "해요체"
+      }
+    ]
+  },
+  "phrases": {
+    "rm_intp": [
+      {
+        "korean": "진심으로 존경해요",
+        "pronunciation": "jin·sim·eu·ro jon·gyeong·hae·yo",
+        "english": "I sincerely respect you",
+        "why_it_works": "진심으로 adds emotional weight without stiffness. 해요체 ending keeps it warm and conversational."
+      },
+      {
+        "korean": "팬이에요! 만나서 정말 반가워요",
+        "pronunciation": "paen·i·e·yo! man·na·seo jeong·mal ban·ga·wo·yo",
+        "english": "I'm a fan! I'm really glad to meet you",
+        "why_it_works": "Short, emotionally direct, right register. Ideal for the 3–5 second window."
+      },
+      {
+        "korean": "항상 응원할게요",
+        "pronunciation": "hang·sang eung·won·hal·ge·yo",
+        "english": "I'll always support you",
+        "why_it_works": "Forward-looking and warm. 할게요 expresses personal commitment — not stiff, not casual."
+      }
+    ],
+    "rm_infp": [
+      {
+        "korean": "오늘 진짜 멋있어요",
+        "pronunciation": "o·neul jin·jja meot·it·seo·yo",
+        "english": "You're really amazing today",
+        "why_it_works": "진짜 adds genuine intensity without sounding over-the-top. 해요체 keeps the register exactly right."
+      },
+      {
+        "korean": "BTS 음악은 항상 진심이 느껴져요",
+        "pronunciation": "BTS eu·ma·geun hang·sang jin·si·mi neu·kyeo·jeo·yo",
+        "english": "Your music always feels sincere",
+        "why_it_works": "Specific and genuine — tells V what his art means to you emotionally."
+      },
+      {
+        "korean": "실물이 훨씬 잘생겼어요",
+        "pronunciation": "sil·mu·ri hwol·ssin jal·saeng·gyeo·sseo·yo",
+        "english": "You look even better in person",
+        "why_it_works": "Fan meeting classic. Acknowledges the real-person moment. Warm, natural, slightly playful."
+      }
+    ]
+  },
+  "dialogue": {
+    "rm_intp": [
+      {
+        "speaker": "YOU",
+        "side": "fan",
+        "korean": "안녕하세요! 팬이에요. 만나서 정말 반가워요.",
+        "english": "Hello! I'm a fan. Really glad to meet you."
+      },
+      {
+        "speaker": "RM",
+        "side": "idol",
+        "korean": "반가워요~ 멀리서 왔어요?",
+        "english": "Nice to meet you~ Did you come from far away?"
+      },
+      {
+        "speaker": "YOU",
+        "side": "fan",
+        "korean": "네! 진심으로 응원하고 있어요. 음악이 정말 좋아요.",
+        "english": "Yes! I sincerely support you. Your music means a lot to me."
+      },
+      {
+        "speaker": "RM",
+        "side": "idol",
+        "korean": "감사해요. 앞으로도 잘 부탁드려요.",
+        "english": "Thank you. Please keep supporting us."
+      }
+    ],
+    "rm_infp": [
+      {
+        "speaker": "YOU",
+        "side": "fan",
+        "korean": "안녕하세요! 오늘 진짜 멋있어요.",
+        "english": "Hello! You look really amazing today."
+      },
+      {
+        "speaker": "V",
+        "side": "idol",
+        "korean": "감사해요~ 오늘 즐거우셨어요?",
+        "english": "Thank you~ Are you having a good time today?"
+      },
+      {
+        "speaker": "YOU",
+        "side": "fan",
+        "korean": "네! BTS 음악이 항상 힘이 돼요. 앞으로도 응원할게요.",
+        "english": "Yes! BTS music always gives me strength. I'll keep supporting you."
+      },
+      {
+        "speaker": "V",
+        "side": "idol",
+        "korean": "저도 팬분들 덕분에 힘내요. 와줘서 고마워요.",
+        "english": "I gain strength from fans too. Thank you for coming."
+      }
+    ]
+  },
+  "tone_guidance": {
+    "rm_intp": {
+      "avoid": "습니다체 (존경합니다, 감사드립니다) — Creates presentation-like distance. Too official for a personal moment.",
+      "neutral": "반말 (존경해, 응원할게) — Appropriate only with real intimacy. Too casual for a first fan meeting.",
+      "correct": "해요체 (존경해요, 응원할게요) — Warm, conversational, respectful. Emotionally right for fan–idol interaction.",
+      "tone_summary": "RM values sincerity and thoughtfulness. Match his calm emotional register — don't overcorrect into formality or casualness.",
+      "spectrum": [
+        { "label": "반말", "position": 0, "recommended": false },
+        { "label": "해요체", "position": 50, "recommended": true },
+        { "label": "습니다체", "position": 100, "recommended": false }
+      ]
+    },
+    "rm_infp": {
+      "avoid": "습니다체 / 다나까체 (멋있습니다, 훌륭하십니다) — Clinical and cold. V responds to genuine emotion, not formal evaluation.",
+      "neutral": "반말 (멋있다, 응원할게) — V might respond warmly, but at a fan meeting it's still a social risk.",
+      "correct": "Warm 해요체 + 진짜/정말 (진짜 멋있어요, 정말 감동받았어요) — Emotionally expressive, appropriately polite.",
+      "tone_summary": "V is open and expressive. He responds well to specific, genuine compliments. Avoid scripted phrases — be real, be warm.",
+      "spectrum": [
+        { "label": "반말", "position": 0, "recommended": false },
+        { "label": "해요체", "position": 50, "recommended": true },
+        { "label": "습니다체", "position": 100, "recommended": false }
+      ]
+    }
+  },
+  "quiz": {
+    "rm_intp": [
+      {
+        "type": "fill_blank",
+        "question": "Fill in the blank — I sincerely respect you",
+        "prefix": "진심으로",
+        "blank": "존경",
+        "suffix": "해요",
+        "answer": "존경",
+        "hint": "존___"
+      },
+      {
+        "type": "fill_blank",
+        "question": "Complete the greeting — I'm really glad to meet you",
+        "prefix": "만나서 정말 반가",
+        "blank": "워요",
+        "suffix": "",
+        "answer": "워요",
+        "hint": "워__"
+      }
+    ],
+    "rm_infp": [
+      {
+        "type": "fill_blank",
+        "question": "Fill in the blank — You're really amazing today",
+        "prefix": "오늘 진짜 멋",
+        "blank": "있어요",
+        "suffix": "",
+        "answer": "있어요",
+        "hint": "있___"
+      },
+      {
+        "type": "fill_blank",
+        "question": "Complete — Your music always feels sincere",
+        "prefix": "진심이 느껴",
+        "blank": "져요",
+        "suffix": "",
+        "answer": "져요",
+        "hint": "져__"
+      }
+    ]
+  }
+}
