@@ -115,37 +115,58 @@ export default async function HomePage() {
 
         {/* ── QUICK START CTA ── */}
         <section className="px-5 py-6 border-b border-b-dim">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Link
-              href="/learn/fan_meeting/FM_001"
-              className="group relative p-5 bg-mint/[0.04] border border-mint/20 rounded-2xl hover:bg-mint/[0.08] hover:border-mint/35 hover:shadow-[0_0_12px_rgba(0,229,180,0.15)] transition-all min-h-[110px] flex flex-col justify-between"
-            >
-              <div>
-                <p className="font-caption text-mint/60 mb-2">Start here</p>
-                <p className="font-headline text-t100 mb-1.5 group-hover:text-mint transition-colors">
-                  Fan Meeting
-                </p>
-                <p className="font-body-sm text-t300">First Greeting · 8 min</p>
-              </div>
-              <div className="absolute right-4 bottom-4 w-8 h-8 rounded-full bg-mint/10 group-hover:bg-mint/20 flex items-center justify-center transition-colors">
-                <span className="text-mint text-sm">→</span>
-              </div>
-            </Link>
-            <Link
-              href="/dashboard"
-              className="group relative p-5 bg-s1 border border-b-mid rounded-2xl hover:border-b-hi hover:bg-white/[0.02] hover:shadow-[0_0_12px_rgba(255,255,255,0.04)] transition-all min-h-[110px] flex flex-col justify-between"
-            >
-              <div>
-                <p className="font-caption text-t400 mb-2">Progress</p>
-                <p className="font-headline text-t100 mb-1.5 group-hover:text-mint transition-colors">
-                  My Dashboard
-                </p>
-                <p className="font-body-sm text-t300">Track completions</p>
-              </div>
-              <div className="absolute right-4 bottom-4 w-8 h-8 rounded-full bg-white/[0.05] group-hover:bg-white/[0.1] flex items-center justify-center transition-colors">
-                <span className="text-t200 text-sm">→</span>
-              </div>
-            </Link>
+          <style>{`
+            .quick-start-card {
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .quick-start-card:hover {
+              border-color: var(--lesson-color) !important;
+              box-shadow: 0 0 20px var(--lesson-glow-color);
+              transform: translateY(-2px);
+            }
+          `}</style>
+          <p className="font-caption text-t400 mb-4">Quick start / Live Lessons</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {CATEGORIES.flatMap((cat) =>
+              cat.lessons
+                .filter((l) => l.status === "live")
+                .map((lesson) => (
+                  <Link
+                    key={lesson.id}
+                    href={`/learn/${cat.id}/${lesson.id}`}
+                    className="quick-start-card group relative p-5 bg-white/[0.01] border border-white/[0.08] rounded-2xl min-h-[130px] flex flex-col justify-between overflow-hidden"
+                    style={{
+                      borderColor: `${cat.color}20`,
+                      background: `linear-gradient(180deg, ${cat.color}03 0%, transparent 100%)`,
+                      ["--lesson-color" as any]: cat.color,
+                      ["--lesson-glow-color" as any]: `${cat.color}15`,
+                    }}
+                  >
+                    <div>
+                      <p 
+                        className="font-caption mb-2 text-xs font-semibold tracking-wider uppercase"
+                        style={{ color: `${cat.color}d0` }}
+                      >
+                        {cat.name}
+                      </p>
+                      <h3 className="font-headline text-t100 mb-1.5 transition-colors group-hover:text-white">
+                        {lesson.title}
+                      </h3>
+                      <p className="font-body-sm text-t300 pr-8">
+                        {lesson.sub.split(" · ").slice(0, -1).join(" · ")} · {lesson.estimated_minutes} min
+                      </p>
+                    </div>
+                    <div 
+                      className="absolute right-4 bottom-4 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                      style={{
+                        background: `${cat.color}15`,
+                      }}
+                    >
+                      <span style={{ color: cat.color }} className="text-sm font-bold">→</span>
+                    </div>
+                  </Link>
+                ))
+            )}
           </div>
         </section>
 
