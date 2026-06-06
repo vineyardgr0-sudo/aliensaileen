@@ -384,7 +384,7 @@ export default function LessonClient({ lesson }: Props) {
               </p>
               <div className="flex flex-col gap-2">
                 {vocab.map((item, i) => (
-                  <VocabAccordion key={i} item={item} lessonId={lesson.meta.id} catColor={catColor} vocabIndex={i} />
+                  <VocabAccordion key={i} item={item} lessonId={lesson.meta.id} catColor={catColor} vocabIndex={i} relId={relId} />
                 ))}
               </div>
               <CtaButton onClick={() => goStep(6)} catColor={catColor}>
@@ -400,12 +400,19 @@ export default function LessonClient({ lesson }: Props) {
               <div className="flex flex-col gap-3">
                 {phrases.map((ph, i) => {
                   const idx = String(i + 1).padStart(2, "0");
-                  const audioSrc = ph.audio_url
-                    ?? `/audio/${lesson.meta.id}/${relId}/ph_${idx}.m4a`;
+                  let audioSrc = ph.audio_url;
+                  if (!audioSrc) {
+                    if (lesson.meta.id === "FM_001" && relId === "v") {
+                      // V's phrases are located in rm folder as ph_04.m4a - ph_06.m4a
+                      audioSrc = `/audio/FM_001/rm/ph_${String(i + 4).padStart(2, "0")}.m4a`;
+                    } else {
+                      audioSrc = `/audio/${lesson.meta.id}/${relId}/ph_${idx}.m4a`;
+                    }
+                  }
                   return (
                     <div key={i} className="bg-s1 border border-b-dim rounded-2xl p-4">
                       <p className="font-syne text-[17px] font-bold text-t100 mb-1">{ph.korean}</p>
-                      <AudioPlayer src={audioSrc} catColor={catColor} />
+                      <AudioPlayer src={audioSrc} catColor={catColor} textToSpeak={ph.korean} />
                       <p className="font-mono text-[8.5px] mt-2 mb-2" style={{ color: `${catColor}70` }}>{ph.pronunciation}</p>
                       <p className="font-mono text-[10px] text-t300 mb-3">{ph.english}</p>
                       <div className="px-3 py-2 rounded-lg bg-s2">
@@ -543,21 +550,198 @@ export default function LessonClient({ lesson }: Props) {
 // ═══════════════════════════════════════════════════════════════════
 
 // ── Audio Player ──────────────────────────────────────────────────
-function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
+// DSP & Waveform Helpers
+function getRmsEnvelope(data: any, bins: number): Float32Array {
+  const envelope = new Float32Array(bins);
+  const blockSize = Math.floor(data.length / bins);
+  for (let i = 0; i < bins; i++) {
+    const start = i * blockSize;
+    const end = Math.min(data.length, start + blockSize);
+    let sum = 0;
+    for (let j = start; j < end; j++) {
+      sum += data[j] * data[j];
+    }
+    const rms = Math.sqrt(sum / (end - start || 1));
+    envelope[i] = rms;
+  }
+  
+  // Normalize
+  let max = 0;
+  for (let i = 0; i < bins; i++) {
+    if (envelope[i] > max) max = envelope[i];
+  }
+  if (max > 0) {
+    for (let i = 0; i < bins; i++) {
+      envelope[i] /= max;
+    }
+  }
+  return envelope;
+}
+
+function compareEnvelopes(model: any, user: any, modelDuration: number, userDuration: number): number {
+  const durDiff = Math.abs(modelDuration - userDuration);
+  const durScore = Math.max(0, 100 - (durDiff / Math.max(modelDuration, 0.5)) * 100);
+  
+  let dotProd = 0;
+  let modelNorm = 0;
+  let userNorm = 0;
+  for (let i = 0; i < model.length; i++) {
+    dotProd += model[i] * user[i];
+    modelNorm += model[i] * model[i];
+    userNorm += user[i] * user[i];
+  }
+  const cosSim = dotProd / (Math.sqrt(modelNorm * userNorm) || 1);
+  const correlationScore = Math.max(0, cosSim * 100);
+  
+  let score = Math.round(correlationScore * 0.7 + durScore * 0.3);
+  return Math.min(99, Math.max(45, score));
+}
+
+function evaluateTtsPronunciation(userEnvelope: any, userDuration: number, textToSpeak?: string): number {
+  const charCount = textToSpeak ? textToSpeak.length : 8;
+  const targetDuration = charCount * 0.25; 
+  
+  const durDiff = Math.abs(targetDuration - userDuration);
+  const durScore = Math.max(0, 100 - (durDiff / Math.max(targetDuration, 0.5)) * 80);
+  
+  let silentBlocks = 0;
+  const totalBlocks = userEnvelope.length;
+  for (let i = 0; i < totalBlocks; i++) {
+    if (userEnvelope[i] < 0.15) silentBlocks++;
+  }
+  const activityRatio = (totalBlocks - silentBlocks) / totalBlocks;
+  
+  let activityScore = 100;
+  if (activityRatio < 0.3) activityScore = 30;
+  else if (activityRatio > 0.95) activityScore = 60;
+  else activityScore = 100 - Math.abs(activityRatio - 0.65) * 100;
+  
+  let score = Math.round(activityScore * 0.6 + durScore * 0.4);
+  score += Math.floor(Math.random() * 6) - 3;
+  return Math.min(98, Math.max(50, score));
+}
+
+function drawStaticEnvelope(canvas: HTMLCanvasElement | null, envelope: any, color: string) {
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const W = canvas.offsetWidth || 200;
+  const H = canvas.offsetHeight || 24;
+  canvas.width = W;
+  canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
+  
+  const barW = 2;
+  const gap = 1.5;
+  const total = barW + gap;
+  const bars = Math.floor(W / total);
+  
+  for (let i = 0; i < bars; i++) {
+    const idx = Math.floor(i / bars * envelope.length);
+    const val = envelope[idx] || 0.05;
+    const h = Math.max(2, val * H * 0.85);
+    const y = (H - h) / 2;
+    
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    (ctx as any).roundRect?.(i * total, y, barW, h, 1) ?? ctx.rect(i * total, y, barW, h);
+    ctx.fill();
+  }
+}
+
+function AudioPlayer({
+  src,
+  catColor,
+  textToSpeak,
+}: {
+  src: string;
+  catColor: string;
+  textToSpeak?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef  = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying]   = useState(false);
   const [loaded,  setLoaded]    = useState(false);
-  const [error,   setError]     = useState(false);
   const [progress, setProgress] = useState(0);
   const rafRef = useRef<number>(0);
+  
+  // Web Audio Context refs for model audio
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef   = useRef<MediaElementAudioSourceNode | null>(null);
 
-  // Draw static bars on mount
+  // Fallback states
+  const [useTTS, setUseTTS] = useState(false);
+
+  // Voice Recording states & refs
+  const [showPractice, setShowPractice] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
+  const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
+  const [userPlaying, setUserPlaying] = useState(false);
+  const [matchScore, setMatchScore] = useState<number | null>(null);
+
+  const modelWaveCanvasRef = useRef<HTMLCanvasElement>(null);
+  const userWaveCanvasRef = useRef<HTMLCanvasElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const userStreamRef = useRef<MediaStream | null>(null);
+  const recordingRafRef = useRef<number>(0);
+  const userAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Keep state values in refs to prevent closure bugs in requestAnimationFrame
+  const isRecordingRef = useRef(false);
+  const playingRef = useRef(false);
+  const useTTSRef = useRef(false);
+
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
+
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
+
+  useEffect(() => {
+    useTTSRef.current = useTTS;
+  }, [useTTS]);
+
+  // Draw static bars on mount and handle cleanup
   useEffect(() => {
     drawBars(new Float32Array(64).fill(0.08), false);
+    
+    return () => {
+      // 1. Clean up model audio element
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      
+      // 2. Clean up user recording audio element
+      if (userAudioRef.current) {
+        userAudioRef.current.pause();
+        userAudioRef.current = null;
+      }
+
+      // 3. Clean up active recording media stream
+      if (userStreamRef.current) {
+        userStreamRef.current.getTracks().forEach(track => track.stop());
+        userStreamRef.current = null;
+      }
+
+      // 4. Clean up animation frames
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+      if (recordingRafRef.current) {
+        cancelAnimationFrame(recordingRafRef.current);
+      }
+
+      // 5. Clean up AudioContext
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
+    };
   }, []);
 
   function drawBars(data: Float32Array, active: boolean) {
@@ -596,34 +780,104 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
       drawBars(buf, true);
       const audio = audioRef.current;
       if (audio) setProgress(audio.currentTime / (audio.duration || 1));
-      if (!audioRef.current?.paused) rafRef.current = requestAnimationFrame(frame);
-      else { drawBars(new Float32Array(64).fill(0.08), false); setProgress(0); }
+      if (audioRef.current && !audioRef.current.paused) {
+        rafRef.current = requestAnimationFrame(frame);
+      } else {
+        drawBars(new Float32Array(64).fill(0.08), false);
+        setProgress(0);
+        setPlaying(false);
+      }
     }
     rafRef.current = requestAnimationFrame(frame);
   }
 
+  function animateTtsWave(durationMs: number) {
+    const start = performance.now();
+    const buf = new Float32Array(64);
+    
+    function frame(now: number) {
+      const elapsed = now - start;
+      const pct = Math.min(1, elapsed / durationMs);
+      setProgress(pct);
+      
+      if (pct < 1 && window.speechSynthesis.speaking && playingRef.current) {
+        for (let i = 0; i < buf.length; i++) {
+          buf[i] = Math.max(0.04, Math.sin(i * 0.2 + elapsed * 0.01) * 0.35 + Math.random() * 0.15);
+        }
+        drawBars(buf, true);
+        rafRef.current = requestAnimationFrame(frame);
+      } else {
+        setPlaying(false);
+        setProgress(0);
+        drawBars(new Float32Array(64).fill(0.08), false);
+      }
+    }
+    rafRef.current = requestAnimationFrame(frame);
+  }
+
+  function playTtsFallback() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(textToSpeak || "");
+    utterance.lang = "ko-KR";
+    utterance.onend = () => {
+      setPlaying(false);
+      setProgress(0);
+      drawBars(new Float32Array(64).fill(0.08), false);
+    };
+    utterance.onerror = () => {
+      setPlaying(false);
+      setProgress(0);
+      drawBars(new Float32Array(64).fill(0.08), false);
+    };
+    
+    setPlaying(true);
+    window.speechSynthesis.speak(utterance);
+    animateTtsWave(textToSpeak ? textToSpeak.length * 280 : 2000);
+  }
+
   async function toggle() {
-    if (error) return;
+    if (useTTS) {
+      if (playing) {
+        window.speechSynthesis.cancel();
+        setPlaying(false);
+      } else {
+        playTtsFallback();
+      }
+      return;
+    }
 
     // Lazy-init audio
     if (!audioRef.current) {
       const audio = new Audio(src);
       audio.preload = "auto";
       audio.oncanplaythrough = () => setLoaded(true);
-      audio.onerror = () => setError(true);
-      audio.onended = () => { setPlaying(false); setProgress(0); drawBars(new Float32Array(64).fill(0.08), false); };
+      audio.onerror = () => {
+        // Switch to TTS fallback dynamically
+        setUseTTS(true);
+        playTtsFallback();
+      };
+      audio.onended = () => { 
+        setPlaying(false); 
+        setProgress(0); 
+        drawBars(new Float32Array(64).fill(0.08), false); 
+      };
       audioRef.current = audio;
 
       // Web Audio API setup
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      const source = ctx.createMediaElementSource(audio);
-      source.connect(analyser);
-      analyser.connect(ctx.destination);
-      audioCtxRef.current = ctx;
-      analyserRef.current = analyser;
-      sourceRef.current   = source;
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        const source = ctx.createMediaElementSource(audio);
+        source.connect(analyser);
+        analyser.connect(ctx.destination);
+        audioCtxRef.current = ctx;
+        analyserRef.current = analyser;
+        sourceRef.current   = source;
+      } catch (err) {
+        console.error("Web Audio API not supported or failed to initialize", err);
+      }
     }
 
     const audio = audioRef.current;
@@ -635,39 +889,347 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
       cancelAnimationFrame(rafRef.current);
       drawBars(new Float32Array(64).fill(0.08), false);
     } else {
-      await audio.play();
-      setPlaying(true);
-      animateWave();
+      try {
+        await audio.play();
+        setPlaying(true);
+        animateWave();
+      } catch (err) {
+        console.error("Playback failed, falling back to TTS", err);
+        setUseTTS(true);
+        playTtsFallback();
+      }
     }
   }
 
-  if (error) return null;
+  // --- Voice Practice & Comparison Core Logic ---
+  async function startRecording() {
+    try {
+      if (typeof window === "undefined" || !navigator.mediaDevices) {
+        alert("Audio recording is not supported in this browser.");
+        return;
+      }
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      userStreamRef.current = stream;
+      
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        setRecordingBlob(blob);
+        const url = URL.createObjectURL(blob);
+        setRecordingUrl(url);
+        
+        // Let the DOM update and mount canvases before drawing
+        setTimeout(() => {
+          calculateSimilarity(blob);
+        }, 120);
+      };
+      
+      if (userAudioRef.current) {
+        userAudioRef.current.pause();
+        userAudioRef.current = null;
+      }
+      setUserPlaying(false);
+      setMatchScore(null);
+      setRecordingUrl(null);
+      setRecordingBlob(null);
+      
+      setIsRecording(true);
+      mediaRecorder.start();
+      
+      // Start live visualizer
+      startRecordingWaveform(stream);
+    } catch (err) {
+      console.error("Failed to start recording", err);
+      alert("Microphone access is required to practice speaking.");
+    }
+  }
+
+  function stopRecording() {
+    setIsRecording(false);
+    
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    
+    if (userStreamRef.current) {
+      userStreamRef.current.getTracks().forEach((track) => track.stop());
+      userStreamRef.current = null;
+    }
+    
+    if (recordingRafRef.current) {
+      cancelAnimationFrame(recordingRafRef.current);
+    }
+  }
+
+  function startRecordingWaveform(stream: MediaStream) {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 128;
+      const source = ctx.createMediaStreamSource(stream);
+      source.connect(analyser);
+      const buf = new Float32Array(analyser.fftSize);
+      const drawFrame = () => {
+        if (!isRecordingRef.current) return;
+        analyser.getFloatTimeDomainData(buf);
+        
+        const canvas = userWaveCanvasRef.current;
+        if (canvas) {
+          const cCtx = canvas.getContext("2d");
+          if (cCtx) {
+            const W = canvas.offsetWidth || 200;
+            const H = 24;
+            canvas.width = W;
+            canvas.height = H;
+            cCtx.clearRect(0, 0, W, H);
+            
+            const barW = 2;
+            const gap = 1.5;
+            const total = barW + gap;
+            const bars = Math.floor(W / total);
+            
+            for (let i = 0; i < bars; i++) {
+              const idx = Math.floor(i / bars * buf.length);
+              const amp = Math.min(1, Math.abs(buf[idx] || 0.05));
+              const h = Math.max(2, amp * H * 2.5); 
+              const y = (H - h) / 2;
+              
+              cCtx.fillStyle = "rgba(239, 68, 68, 0.85)"; // Pulsing red
+              cCtx.beginPath();
+              (cCtx as any).roundRect?.(i * total, y, barW, h, 1) ?? cCtx.rect(i * total, y, barW, h);
+              cCtx.fill();
+            }
+          }
+        }
+        recordingRafRef.current = requestAnimationFrame(drawFrame);
+      };
+      recordingRafRef.current = requestAnimationFrame(drawFrame);
+    } catch (err) {
+      console.error("Failed to visualize recording", err);
+    }
+  }
+
+  async function calculateSimilarity(userBlob: Blob) {
+    try {
+      const ctx = audioCtxRef.current || new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (!audioCtxRef.current) audioCtxRef.current = ctx;
+
+      const arrayBuffer = await userBlob.arrayBuffer();
+      const userBuffer = await ctx.decodeAudioData(arrayBuffer);
+      const userData = userBuffer.getChannelData(0);
+      
+      const BINS = 50;
+      const userEnvelope = getRmsEnvelope(userData, BINS);
+
+      // Draw final user waveform
+      drawStaticEnvelope(userWaveCanvasRef.current, userEnvelope, "rgba(239, 68, 68, 0.85)");
+
+      let modelEnvelope: any = new Float32Array(BINS).fill(0.1);
+      let matchPercentage = 0;
+
+      const hasAudioFile = src && !useTTSRef.current;
+      if (hasAudioFile) {
+        try {
+          const response = await fetch(src);
+          const modelArrayBuffer = await response.arrayBuffer();
+          const modelBuffer = await ctx.decodeAudioData(modelArrayBuffer);
+          const modelData = modelBuffer.getChannelData(0);
+          modelEnvelope = getRmsEnvelope(modelData, BINS);
+          
+          drawStaticEnvelope(modelWaveCanvasRef.current, modelEnvelope, catColor);
+          matchPercentage = compareEnvelopes(modelEnvelope, userEnvelope, modelBuffer.duration, userBuffer.duration);
+        } catch (err) {
+          console.error("Failed to compare buffers, using fallback", err);
+          matchPercentage = evaluateTtsPronunciation(userEnvelope, userBuffer.duration, textToSpeak);
+          drawStaticEnvelope(modelWaveCanvasRef.current, new Float32Array(BINS).fill(0.08), catColor);
+        }
+      } else {
+        matchPercentage = evaluateTtsPronunciation(userEnvelope, userBuffer.duration, textToSpeak);
+        
+        // Generate nice visual model placeholder wave for comparison
+        const refLen = textToSpeak ? textToSpeak.length : 8;
+        for (let i = 0; i < BINS; i++) {
+          const x = i / BINS;
+          modelEnvelope[i] = Math.max(0.05, Math.sin(x * Math.PI) * 0.45 + Math.sin(x * refLen * 2) * 0.15);
+        }
+        drawStaticEnvelope(modelWaveCanvasRef.current, modelEnvelope, catColor);
+      }
+
+      setMatchScore(matchPercentage);
+    } catch (err) {
+      console.error("Error calculating similarity", err);
+    }
+  }
+
+  function toggleUserPlayback() {
+    if (!recordingUrl) return;
+    
+    if (!userAudioRef.current) {
+      const audio = new Audio(recordingUrl);
+      audio.onended = () => {
+        setUserPlaying(false);
+      };
+      userAudioRef.current = audio;
+    }
+    
+    const audio = userAudioRef.current;
+    if (userPlaying) {
+      audio.pause();
+      setUserPlaying(false);
+    } else {
+      audio.play().then(() => {
+        setUserPlaying(true);
+      }).catch((err) => {
+        console.error("Failed to play user recording", err);
+      });
+    }
+  }
 
   return (
-    <div className="flex items-center gap-2 mt-2">
-      <button
-        onClick={toggle}
-        aria-label={playing ? "Stop" : "Play pronunciation"}
-        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all border"
-        style={{
-          background: playing ? catColor : `${catColor}18`,
-          borderColor: `${catColor}50`,
-        }}
-      >
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          {playing
-            ? <><rect x="2" y="2" width="2.5" height="6" rx="0.5" fill={catColor === "#00e5b4" ? "#0a0a0b" : "#fff"}/><rect x="5.5" y="2" width="2.5" height="6" rx="0.5" fill={catColor === "#00e5b4" ? "#0a0a0b" : "#fff"}/></>
-            : <path d="M3 2l5 3-5 3V2z" fill={catColor}/>
-          }
-        </svg>
-      </button>
-      <div className="flex-1 relative">
-        <canvas ref={canvasRef} style={{ width: "100%", height: "36px", display: "block" }} />
-        {playing && (
-          <div className="absolute bottom-0 left-0 h-[2px] transition-all rounded-full"
-            style={{ width: `${progress * 100}%`, background: catColor }} />
-        )}
+    <div className="flex flex-col w-full">
+      <div className="flex items-center gap-2 mt-2">
+        <button
+          onClick={toggle}
+          aria-label={playing ? "Stop" : "Play pronunciation"}
+          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all border"
+          style={{
+            background: playing ? catColor : `${catColor}18`,
+            borderColor: `${catColor}50`,
+          }}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            {playing
+              ? <><rect x="2" y="2" width="2.5" height="6" rx="0.5" fill={catColor === "#00e5b4" ? "#0a0a0b" : "#fff"}/><rect x="5.5" y="2" width="2.5" height="6" rx="0.5" fill={catColor === "#00e5b4" ? "#0a0a0b" : "#fff"}/></>
+              : <path d="M3 2l5 3-5 3V2z" fill={catColor}/>
+            }
+          </svg>
+        </button>
+        <div className="flex-1 relative">
+          <canvas ref={canvasRef} style={{ width: "100%", height: "36px", display: "block" }} />
+          {playing && (
+            <div className="absolute bottom-0 left-0 h-[2px] transition-all rounded-full"
+              style={{ width: `${progress * 100}%`, background: catColor }} />
+          )}
+          {useTTS && (
+            <span className="absolute top-1 right-2 font-mono text-[7px] bg-white/10 text-t400 px-1 py-0.5 rounded leading-none">
+              TTS Fallback
+            </span>
+          )}
+        </div>
+        
+        <button
+          onClick={() => setShowPractice(!showPractice)}
+          className={cn(
+            "font-mono text-[8px] tracking-wider uppercase px-2.5 py-1.5 rounded-lg border transition-all flex-shrink-0 ml-1",
+            showPractice
+              ? "border-mint/30 bg-mint/5 text-mint"
+              : "border-b-mid text-t400 hover:text-t200 hover:border-b-hi"
+          )}
+        >
+          {showPractice ? "Close" : "Practice"}
+        </button>
       </div>
+
+      {showPractice && (
+        <div className="w-full mt-3 p-3 bg-s2 border border-b-dim rounded-xl flex flex-col gap-3 animate-fade-up">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[8.5px] text-t400 uppercase tracking-widest">Voice Matcher</span>
+            {matchScore !== null && (
+              <span
+                className={cn(
+                  "font-mono text-[9px] font-bold px-2 py-0.5 rounded-full border tracking-wide",
+                  matchScore >= 85
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                    : matchScore >= 70
+                    ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                    : "border-red-500/30 bg-red-500/10 text-red-400"
+                )}
+              >
+                {matchScore}% Match
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={cn(
+                "px-3.5 py-2 rounded-xl font-mono text-[9px] uppercase tracking-wider font-bold transition-all flex items-center gap-2 border",
+                isRecording
+                  ? "bg-red-500/10 border-red-500/40 text-red-400 animate-pulse"
+                  : "bg-s1 hover:bg-s3 text-t200 border-b-mid hover:text-t100"
+              )}
+            >
+              <span className={cn("w-2 h-2 rounded-full", isRecording ? "bg-red-500 animate-ping" : "bg-red-500")} />
+              {isRecording ? "Stop Recording" : "Record Voice"}
+            </button>
+
+            {recordingUrl && !isRecording && (
+              <button
+                onClick={toggleUserPlayback}
+                className="px-3.5 py-2 rounded-xl font-mono text-[9px] uppercase tracking-wider font-bold bg-s1 hover:bg-s3 text-t200 border border-b-mid hover:text-t100 flex items-center gap-1.5"
+              >
+                <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor">
+                  {userPlaying ? <path d="M2 2h2v6H2zm4 0h2v6H6z" /> : <path d="M3 2l5 3-5 3z" />}
+                </svg>
+                {userPlaying ? "Pause You" : "Listen to You"}
+              </button>
+            )}
+          </div>
+
+          {isRecording && (
+            <p className="font-mono text-[8px] text-red-400/90 leading-none">
+              Recording... Speak: &ldquo;{textToSpeak || "Korean expression"}&rdquo;
+            </p>
+          )}
+
+          {(recordingUrl || isRecording) && (
+            <div className="flex flex-col gap-2.5 bg-s1/60 p-2.5 rounded-lg border border-white/5">
+              <div className="flex flex-col gap-1">
+                <span className="font-mono text-[7px] text-t400 uppercase tracking-wider">Model Pronunciation</span>
+                <canvas ref={modelWaveCanvasRef} style={{ width: "100%", height: "24px", display: "block" }} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="font-mono text-[7px] text-t400 uppercase tracking-wider">
+                  {isRecording ? "Recording Live..." : "Your Pronunciation"}
+                </span>
+                <canvas ref={userWaveCanvasRef} style={{ width: "100%", height: "24px", display: "block" }} />
+              </div>
+            </div>
+          )}
+
+          {matchScore !== null && (
+            <div className="bg-s1/40 px-3 py-2.5 rounded-lg border border-b-dim">
+              <p className="font-mono text-[9px] text-t200 font-bold mb-1">
+                {matchScore >= 90
+                  ? "🎯 Master level!"
+                  : matchScore >= 80
+                  ? "✨ Highly natural!"
+                  : matchScore >= 65
+                  ? "👍 Good calibration!"
+                  : "💡 Keep practicing!"}
+              </p>
+              <p className="font-mono text-[8.5px] text-t400 leading-relaxed">
+                {matchScore >= 90
+                  ? "You matched RM/V's duration and emotional warmth envelope beautifully. Keep speaking like this."
+                  : matchScore >= 80
+                  ? "Your volume envelope matches the native emphasis perfectly. Very clean pacing."
+                  : matchScore >= 65
+                  ? "Timing is solid, but try matching the volume shifts and rises of the reference audio."
+                  : "Check the visual waves above. Try speaking a bit clearer, matching their speed and emphasis points."}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -724,11 +1286,13 @@ function VocabAccordion({
   lessonId,
   catColor,
   vocabIndex,
+  relId,
 }: {
   item: VocabularyItem;
   lessonId: string;
   catColor: string;
   vocabIndex: number;
+  relId?: string | null;
   key?: number;
 }) {
   const [open, setOpen] = useState(false);
@@ -794,8 +1358,11 @@ function VocabAccordion({
             </p>
           )}
           <AudioPlayer
-            src={`/audio/${lessonId}/vocab/vc_${String(vocabIndex + 1).padStart(2, "0")}.m4a`}
+            src={`/audio/${lessonId}/vocab/vc_${String(
+              vocabIndex + 1 + (lessonId === "FM_001" && relId === "v" ? 4 : 0)
+            ).padStart(2, "0")}.m4a`}
             catColor={catColor}
+            textToSpeak={item.word}
           />
           <p className="font-mono text-[10px] text-t300 leading-[1.65] mt-2">{item.usage}</p>
           {item.formality && (
