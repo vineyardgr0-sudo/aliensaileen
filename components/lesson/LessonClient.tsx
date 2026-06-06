@@ -14,6 +14,7 @@ import { useLessonProgress } from "@/hooks/useProgress";
 import { progressStore } from "@/lib/progress/store";
 import { Nav, BackButton } from "@/components/ui/Nav";
 import { cn } from "@/lib/utils";
+import { ShadowingCard } from "@/components/ui/ShadowingCard";
 
 // Local type alias — avoids React namespace resolution issues
 type ReactNode = React.ReactNode;
@@ -405,22 +406,23 @@ export default function LessonClient({ lesson }: Props) {
                     const isFM001 = lesson.meta.id.toUpperCase() === "FM_001";
                     if (isFM001) {
                       const isV = relId === "v" || relId === "rm_infp";
-                      const fileIdx = isV ? i + 4 : i + 1;
-                      audioSrc = `/audio/FM_001/rm/ph_${String(fileIdx).padStart(2, "0")}.m4a`;
+                      const folder = isV ? "v" : "rm";
+                      audioSrc = `/audio/FM_001/${folder}/ph_${idx}.m4a`;
                     } else {
                       audioSrc = `/audio/${lesson.meta.id}/${relId}/ph_${idx}.m4a`;
                     }
                   }
                   return (
-                    <div key={i} className="bg-s1 border border-b-dim rounded-2xl p-4">
-                      <p className="font-syne text-[17px] font-bold text-t100 mb-1">{ph.korean}</p>
-                      <AudioPlayer src={audioSrc} catColor={catColor} textToSpeak={ph.korean} />
-                      <p className="font-mono text-[8.5px] mt-2 mb-2" style={{ color: `${catColor}70` }}>{ph.pronunciation}</p>
-                      <p className="font-mono text-[10px] text-t300 mb-3">{ph.english}</p>
-                      <div className="px-3 py-2 rounded-lg bg-s2">
-                        <p className="font-mono text-[9px] text-t300 leading-[1.65]">{ph.why_it_works}</p>
-                      </div>
-                    </div>
+                    <ShadowingCard
+                      key={i}
+                      korean={ph.korean}
+                      pronunciation={ph.pronunciation}
+                      english={ph.english}
+                      tip={ph.why_it_works}
+                      audioSrc={audioSrc}
+                      catColor={catColor}
+                      enablePractice={true}
+                    />
                   );
                 })}
               </div>
@@ -674,6 +676,7 @@ function AudioPlayer({
 
   // Fallback states
   const [useTTS, setUseTTS] = useState(false);
+  const [audioUnavailable, setAudioUnavailable] = useState(false);
 
   // Voice Recording states & refs
   const [showPractice, setShowPractice] = useState(false);
@@ -694,6 +697,33 @@ function AudioPlayer({
   const isRecordingRef = useRef(false);
   const playingRef = useRef(false);
   const useTTSRef = useRef(false);
+
+  const drawBars = useCallback((data: Float32Array, active: boolean) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const W = canvas.offsetWidth || 200;
+    const H = 36;
+    canvas.width  = W;
+    canvas.height = H;
+    ctx.clearRect(0, 0, W, H);
+    const barW = 3, gap = 2, total = barW + gap;
+    const bars = Math.floor(W / total);
+    for (let i = 0; i < bars; i++) {
+      const idx = Math.floor(i / bars * data.length);
+      const amp  = Math.min(1, Math.abs(data[idx] || 0.06));
+      const h    = Math.max(3, amp * H * 0.9);
+      const y    = (H - h) / 2;
+      ctx.fillStyle = active ? catColor : "rgba(255,255,255,0.18)";
+      ctx.globalAlpha = active ? 0.85 : 0.5;
+      ctx.beginPath();
+      (ctx as any).roundRect?.(i * total, y, barW, h, 1.5) ??
+        ctx.rect(i * total, y, barW, h);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }, [catColor]);
 
   useEffect(() => {
     isRecordingRef.current = isRecording;
@@ -744,34 +774,8 @@ function AudioPlayer({
         audioCtxRef.current = null;
       }
     };
-  }, []);
+  }, [drawBars]);
 
-  function drawBars(data: Float32Array, active: boolean) {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const W = canvas.offsetWidth || 200;
-    const H = 36;
-    canvas.width  = W;
-    canvas.height = H;
-    ctx.clearRect(0, 0, W, H);
-    const barW = 3, gap = 2, total = barW + gap;
-    const bars = Math.floor(W / total);
-    for (let i = 0; i < bars; i++) {
-      const idx = Math.floor(i / bars * data.length);
-      const amp  = Math.min(1, Math.abs(data[idx] || 0.06));
-      const h    = Math.max(3, amp * H * 0.9);
-      const y    = (H - h) / 2;
-      ctx.fillStyle = active ? catColor : "rgba(255,255,255,0.18)";
-      ctx.globalAlpha = active ? 0.85 : 0.5;
-      ctx.beginPath();
-      (ctx as any).roundRect?.(i * total, y, barW, h, 1.5) ??
-        ctx.rect(i * total, y, barW, h);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
 
   function animateWave() {
     const analyser = analyserRef.current;
@@ -855,7 +859,7 @@ function AudioPlayer({
       audio.preload = "auto";
       audio.oncanplaythrough = () => setLoaded(true);
       audio.onerror = () => {
-        // Switch to TTS fallback dynamically
+        setAudioUnavailable(true);
         setUseTTS(true);
         playTtsFallback();
       };
@@ -897,6 +901,7 @@ function AudioPlayer({
         animateWave();
       } catch (err) {
         console.error("Playback failed, falling back to TTS", err);
+        setAudioUnavailable(true);
         setUseTTS(true);
         playTtsFallback();
       }
@@ -1123,6 +1128,11 @@ function AudioPlayer({
           {useTTS && (
             <span className="absolute top-1 right-2 font-mono text-[7px] bg-white/10 text-t400 px-1 py-0.5 rounded leading-none">
               TTS Fallback
+            </span>
+          )}
+          {audioUnavailable && (
+            <span className="absolute top-1 left-2 font-mono text-[7px] bg-red-500/15 text-red-400 border border-red-500/25 px-1 py-0.5 rounded leading-none">
+              Audio unavailable
             </span>
           )}
         </div>

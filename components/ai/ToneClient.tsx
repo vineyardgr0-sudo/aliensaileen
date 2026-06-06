@@ -73,6 +73,26 @@ export default function ToneClient() {
           </div>
         );
       }
+      if (line.startsWith("POLITENESS LEVEL:")) {
+        return (
+          <div key={i} className="mb-4 inline-block mr-4">
+            <p className="font-mono text-[8px] tracking-[0.18em] uppercase text-t400 mb-1.5">Politeness Level</p>
+            <span className="inline-block font-mono text-[11px] px-3 py-1.5 rounded-xl bg-s3 border border-b-dim text-t200 font-bold">
+              {line.replace("POLITENESS LEVEL:", "").trim()}
+            </span>
+          </div>
+        );
+      }
+      if (line.startsWith("EMOTIONAL DISTANCE:")) {
+        return (
+          <div key={i} className="mb-4 inline-block">
+            <p className="font-mono text-[8px] tracking-[0.18em] uppercase text-t400 mb-1.5">Emotional Distance</p>
+            <span className="inline-block font-mono text-[11px] px-3 py-1.5 rounded-xl bg-s3 border border-b-dim text-t200 font-bold">
+              {line.replace("EMOTIONAL DISTANCE:", "").trim()}
+            </span>
+          </div>
+        );
+      }
       if (line.startsWith("WHY:")) {
         return (
           <div key={i} className="mb-4 p-3 bg-s2 border border-b-dim rounded-xl">
