@@ -402,9 +402,11 @@ export default function LessonClient({ lesson }: Props) {
                   const idx = String(i + 1).padStart(2, "0");
                   let audioSrc = ph.audio_url;
                   if (!audioSrc) {
-                    if (lesson.meta.id === "FM_001" && relId === "v") {
-                      // V's phrases are located in rm folder as ph_04.m4a - ph_06.m4a
-                      audioSrc = `/audio/FM_001/rm/ph_${String(i + 4).padStart(2, "0")}.m4a`;
+                    const isFM001 = lesson.meta.id.toUpperCase() === "FM_001";
+                    if (isFM001) {
+                      const isV = relId === "v" || relId === "rm_infp";
+                      const fileIdx = isV ? i + 4 : i + 1;
+                      audioSrc = `/audio/FM_001/rm/ph_${String(fileIdx).padStart(2, "0")}.m4a`;
                     } else {
                       audioSrc = `/audio/${lesson.meta.id}/${relId}/ph_${idx}.m4a`;
                     }
@@ -1359,7 +1361,7 @@ function VocabAccordion({
           )}
           <AudioPlayer
             src={`/audio/${lessonId}/vocab/vc_${String(
-              vocabIndex + 1 + (lessonId === "FM_001" && relId === "v" ? 4 : 0)
+              vocabIndex + 1 + (lessonId.toUpperCase() === "FM_001" && (relId === "v" || relId === "rm_infp") ? 4 : 0)
             ).padStart(2, "0")}.m4a`}
             catColor={catColor}
             textToSpeak={item.word}
