@@ -551,9 +551,7 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const audioRef    = useRef<HTMLAudioElement | null>(null);
   const rafRef      = useRef<number>(0);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const audioCtxRef = useRef<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const analyserRef = useRef<any>(null);
 
   const [playing,  setPlaying]  = useState(false);
@@ -562,6 +560,7 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
 
   useEffect(() => {
     drawBars(new Float32Array(64).fill(0.08), false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function drawBars(data: Float32Array, active: boolean) {
@@ -625,7 +624,6 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
       audioRef.current = audio;
 
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
         if (AC) {
           const ctx     = new AC();
@@ -643,7 +641,6 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
     }
 
     const audio = audioRef.current;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const actx = audioCtxRef.current as any;
     if (actx?.state === "suspended") await actx.resume();
 
