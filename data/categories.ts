@@ -39,6 +39,7 @@ export const CATEGORIES: CategoryManifest[] = [
     tagline: "Real-world Korean — strangers, service workers, semi-familiar adults.",
     description: "Everyday Korean. The situations no textbook covers — how to text someone older, how to read a passive refusal, how service Korean actually works.",
     lessons: [
+      { id: "DL_005", title: "Meeting Your Partner's Mother", sub: "Family home · 예비 장모님 or 어머니 · Intermediate", status: "live", level: "intermediate", estimated_minutes: 10 },
       { id: "DL_001", title: "Texting Someone Older", sub: "Messaging · Beginner", status: "preparing", level: "beginner", estimated_minutes: 8 },
       { id: "DL_002", title: "Café Order — Service Tone", sub: "Café · Beginner", status: "preparing", level: "beginner", estimated_minutes: 7 },
       { id: "DL_003", title: "Detecting a Passive Refusal", sub: "Social · Intermediate", status: "preparing", level: "intermediate", estimated_minutes: 10 },

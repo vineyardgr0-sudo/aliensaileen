@@ -87,11 +87,18 @@ export interface VocabularyItem {
 }
 
 // ── Phrases ─────────────────────────────────────────────────────
+export interface AwkwardPhrase {
+  korean: string;
+  pronunciation: string;
+  why_awkward: string;
+}
+
 export interface PhraseItem {
   korean: string;
   pronunciation: string;
   english: string;
   why_it_works: string;
+  awkward?: AwkwardPhrase;
   audio_url?: string; // Phase 2
 }
 
