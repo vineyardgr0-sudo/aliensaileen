@@ -324,8 +324,9 @@ const DL_006: Lesson = {
         awkward: {
           korean: "안녕하세요~ 오늘 처음 뵙네요!",
           pronunciation: "an·nyeong·ha·se·yo~ o·neul cheo·eum bwep·ne·yo!",
+          label: "Too casual",
           why_awkward:
-            "오늘 처음 뵙네요 states the obvious with a casual tone — as if you're commenting on the weather. The ~ softening after 안녕하세요 and the 네요 ending make it sound like something you'd say to a new colleague, not to someone you're meeting as a potential family member.",
+            "안녕하세요 is correct Korean. 처음 뵙네요 is not wrong. But the ~ softening and the 네요 ending drop the register just enough to signal you treated this as a routine introduction. On a first meeting with someone evaluating whether you belong in her family, the register of a new colleague is not the register of a prospective daughter-in-law.",
         },
       },
       {
@@ -337,8 +338,9 @@ const DL_006: Lesson = {
         awkward: {
           korean: "어머님, 요리를 너무 잘하세요! 정말 대단하세요.",
           pronunciation: "eo·meo·nim, yo·ri·reul neo·mu jal·ha·se·yo! jeong·mal dae·dan·ha·se·yo.",
+          label: "Too generic",
           why_awkward:
-            "대단하세요 (you're amazing) is too broad. It sounds performed rather than genuine. Korean mothers respond better to specific food compliments than to general admiration — 정말 맛있어요 about the specific dish she made lands more honestly than 대단하세요.",
+            "요리를 잘하세요 and 대단하세요 are both grammatically correct and polite. The problem is that either phrase could be said to anyone who cooked anything. It does not respond to what she specifically made, the effort it took, or the care behind it. A compliment that could apply to any cook tells her nothing about whether you noticed her.",
         },
       },
       {
@@ -350,8 +352,9 @@ const DL_006: Lesson = {
         awkward: {
           korean: "제가 할게요! 어머님은 쉬세요.",
           pronunciation: "je·ga hal·ge·yo! eo·meo·nim·eun swi·se·yo.",
+          label: "Incorrect register",
           why_awkward:
-            "쉬세요 (please rest) directed at the host on a first visit sounds presumptuous. You are still a guest — telling the host to rest in her own home oversteps the relationship. 괜찮으시면 제가 도와드릴게요 offers without directing.",
+            "쉬세요 is a command — even a polite one. On a first visit, you are still a guest in her home. A guest does not tell the host what to do. 제가 할게요 declares without asking. 어머님은 쉬세요 directs without permission. The problem is not the politeness level — it is that you are giving instructions to someone whose home you just entered for the first time.",
         },
       },
       {
@@ -363,8 +366,9 @@ const DL_006: Lesson = {
         awkward: {
           korean: "저도 나중에 이렇게 만들어볼게요.",
           pronunciation: "jeo·do na·jung·e i·reo·ke man·deu·reo·bol·ge·yo.",
+          label: "Lacks relationship specificity",
           why_awkward:
-            "Saying you will try to make it yourself implies you do not need to learn from her — which closes the door on a natural bonding opportunity. 비법이 있으세요? invites her to share. 저도 만들어볼게요 signals you'll figure it out alone.",
+            "저도 만들어볼게요 is natural Korean and the register is appropriate. The gap is relational. In Korean family culture, asking an elder to teach you — especially about food — is how rapport is built between a mother-in-law and a daughter-in-law. 비법이 있으세요? opens that door. 저도 만들어볼게요 closes it without either of you noticing.",
         },
       },
       {
@@ -376,8 +380,9 @@ const DL_006: Lesson = {
         awkward: {
           korean: "네, 네. 알겠어요.",
           pronunciation: "ne, ne. al·ge·sseo·yo.",
+          label: "Lacks relationship specificity",
           why_awkward:
-            "네 repeated quickly signals you are ending the conversation, not absorbing it. Korean elders share things they want you to hold onto — a series of quick 네s tells her the words went nowhere. 말씀 잘 들었어요 shows they landed.",
+            "네, 네. 알겠어요 is not wrong and would be fine in many contexts. But Korean elders — particularly a 시어머님 evaluating a potential daughter-in-law — notice the difference between someone who acknowledges and someone who receives. Quick 네s close the exchange. 말씀 잘 들었어요 tells her the words went somewhere.",
         },
       },
       {
@@ -389,8 +394,9 @@ const DL_006: Lesson = {
         awkward: {
           korean: "오늘 너무 좋았어요! 다음에 또 올게요~",
           pronunciation: "o·neul neo·mu jo·a·sseo·yo! da·eu·me tto ol·ge·yo~",
+          label: "Lacks cultural specificity",
           why_awkward:
-            "다음에 또 올게요 — announcing your next visit on the way out — assumes a welcome that has not yet been confirmed. 어머님 should be the one to invite. The ~ ending softens but cannot fix the presumption of a return visit you have not been asked to make.",
+            "오늘 좋았어요 is grammatically fine. But in Korean visiting culture, the guest does not announce a return visit — that invitation belongs to the host. 다음에 또 올게요 with ~ sounds warm to a Korean ear shaped by peer relationships, but in an elder-junior dynamic it reads as assuming access that has not yet been granted.",
         },
       },
     ],
@@ -405,8 +411,9 @@ const DL_006: Lesson = {
         awkward: {
           korean: "정말 즐겁고 의미 있는 시간이었어.",
           pronunciation: "jeong·mal jeul·geop·go ui·mi·it·neun si·ga·ni·eo·sseo.",
+          label: "Too formal",
           why_awkward:
-            "즐겁고 의미 있는 시간 (an enjoyable and meaningful time) sounds like the caption of a social media post, not how you talk to your mother after a tense first visit. The more formal and polished it sounds, the less true it reads.",
+            "즐겁고 의미 있는 시간이었어 is not wrong Korean — the register is 반말 and grammatically natural. But the vocabulary (즐겁다, 의미 있다) belongs to written or semi-formal registers. Your own mother does not want the polished version. She wants to know what actually happened. 생각보다 괜찮았어 is what that sounds like.",
         },
       },
       {
@@ -418,8 +425,9 @@ const DL_006: Lesson = {
         awkward: {
           korean: "전혀 긴장하지 않았어. 자연스럽게 잘 했어.",
           pronunciation: "jeon·hyeo gin·jang·ha·ji a·na·sseo. ja·yeon·seu·reop·ge jal·hae·sseo.",
+          label: "Focus shifted away from listener",
           why_awkward:
-            "If you genuinely felt that way, this is fine. But many daughters-in-law feel at least some anxiety on a first visit — and claiming zero nerves with your own mother can read as either false or emotionally closed. She probably knows anyway.",
+            "전혀 긴장하지 않았어 redirects the conversation toward self-presentation rather than shared processing. Your own mother is not asking to confirm your competence — she is asking because she was thinking about you during the visit. Claiming zero nerves closes the space she opened. 긴장했어 keeps it open.",
         },
       },
       {
@@ -431,8 +439,9 @@ const DL_006: Lesson = {
         awkward: {
           korean: "어머님이 나를 좋아하실지 궁금해요.",
           pronunciation: "eo·meo·ni·mi na·reul jo·a·ha·sil·ji gung·geu·mae·yo.",
+          label: "Incorrect register",
           why_awkward:
-            "해요체 with your own mother after a vulnerable moment creates an odd emotional distance. And 궁금해요 (I'm curious) is too neutral for what you actually feel — 걱정돼 (I'm worried) is the real word.",
+            "어머님이 나를 좋아하실지 궁금해요 uses 해요체 — the polite register — with your own mother. This is the register you just spent an hour maintaining in the other house. Carrying it home signals you have not fully switched back. Your own mother does not need 궁금해요. She gets 걱정돼.",
         },
       },
       {
@@ -444,8 +453,9 @@ const DL_006: Lesson = {
         awkward: {
           korean: "음식은 뭐 그냥 그랬어.",
           pronunciation: "eum·si·geun mwo geu·nyang geu·rae·sseo.",
+          label: "Lacks cultural specificity",
           why_awkward:
-            "그냥 그랬어 (it was just so-so) about food your boyfriend's mother made — even said privately to your own mother — plants a seed you do not need planted. Your own mother talks to people. Be honest, but be measured.",
+            "음식은 뭐 그냥 그랬어 is natural 반말 — the register is correct for this relationship. But in Korean family culture, food is not neutral. What a 시어머님 cooked carries relationship meaning. Dismissing it casually, even in private, misses that signal — and your own mother will notice that you missed it.",
         },
       },
       {
@@ -457,8 +467,9 @@ const DL_006: Lesson = {
         awkward: {
           korean: "제가 좋은 인상을 남겼을 것 같아요.",
           pronunciation: "je·ga jo·eun in·sang·eul nam·gyeo·sseul geot ga·ta·yo.",
+          label: "Focus shifted away from listener",
           why_awkward:
-            "해요체 again — and claiming confident self-assessment (좋은 인상을 남겼을 것 같아요) with your own mother reads as either performance or emotional protection. With her, you can say the uncertain version. She will not judge it.",
+            "제가 좋은 인상을 남겼을 것 같아요 uses 해요체 — wrong register for a conversation with your own mother — but the deeper issue is what it does to the conversation. Claiming a confident self-assessment closes the space your mother opened by asking. It shifts from shared uncertainty to self-presentation. 이상하게 보지 않으셨으면 좋겠어 stays in the shared space.",
         },
       },
       {
@@ -470,8 +481,9 @@ const DL_006: Lesson = {
         awkward: {
           korean: "다음에는 더 잘해야겠어.",
           pronunciation: "da·eu·me·neun deo jal·hae·ya·get·sseo.",
+          label: "Lacks relationship specificity",
           why_awkward:
-            "더 잘해야겠어 is fine — but said alone it closes the conversation rather than opening it. 다음에 또 가도 될 것 같아? invites your mother to weigh in. She has information you do not.",
+            "다음에는 더 잘해야겠어 is natural Korean and shows self-awareness. The gap is relational. Your own mother was not there — she has a read on the family, on 시어머님, on what matters in that household. 다음에 또 가도 될 것 같아? asks for her perspective. 더 잘해야겠어 alone assumes you can evaluate it without her.",
         },
       },
     ],

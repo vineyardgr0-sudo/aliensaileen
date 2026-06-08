@@ -87,9 +87,19 @@ export interface VocabularyItem {
 }
 
 // ── Phrases ─────────────────────────────────────────────────────
+export type AwkwardLabel =
+  | "Incorrect register"
+  | "Too casual"
+  | "Too formal"
+  | "Too generic"
+  | "Lacks relationship specificity"
+  | "Lacks cultural specificity"
+  | "Focus shifted away from listener";
+
 export interface AwkwardPhrase {
   korean: string;
   pronunciation: string;
+  label?: AwkwardLabel;
   why_awkward: string;
 }
 
