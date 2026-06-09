@@ -592,7 +592,9 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
     if (!analyser) return;
     const buf = new Float32Array(analyser.fftSize);
     function frame() {
-      analyser.getFloatTimeDomainData(buf);
+      if (analyser) {
+        analyser.getFloatTimeDomainData(buf);
+      }
       drawBars(buf, true);
       const audio = audioRef.current;
       if (audio) setProgress(audio.currentTime / (audio.duration || 1));
