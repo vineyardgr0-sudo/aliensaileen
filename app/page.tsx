@@ -1,69 +1,17 @@
 "use client";
 
-// ================================================================
-// FILE: app/page.tsx  (REPLACE EXISTING)
-// CHANGES:
-//   1. Hero — same copy, stronger visual hierarchy
-//   2. "BEGIN TRAINING" replaces plain "Sign In" card
-//   3. Relationship Profiler replaces static sign-in gate
-//   4. Live mini-demo shows output change on category select
-//   5. Local mock auth flow fires after profiler selection
-// UNTOUCHED: all lesson data, routing, auth provider
-// ================================================================
-
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { CATEGORIES } from "@/data/categories";
+import { Badge } from "@/components/ui/Badge";
+import { Nav } from "@/components/ui/Nav";
+import { cn } from "@/lib/utils";
 
-const CATEGORIES = [
-  {
-    id: "workplace",
-    kor: "회사",
-    en: "Workplace",
-    traits: ["hierarchy", "register"],
-    demo: [
-      { rel: "상사", out: "저 왔습니다.", note: "습니다체 — hierarchically correct" },
-      { rel: "동료", out: "왔어요 / 나 왔어", note: "depends on closeness" },
-    ],
-  },
-  {
-    id: "dating",
-    kor: "데이트",
-    en: "Dating",
-    traits: ["warmth", "썸 / 소개팅"],
-    demo: [
-      { rel: "썸", out: "저 왔어요 :)", note: "해요체 — warm, first impression" },
-      { rel: "연인", out: "나 왔어!", note: "반말 — natural with closeness" },
-    ],
-  },
-  {
-    id: "fan_meeting",
-    kor: "팬미팅",
-    en: "Fan Meeting",
-    traits: ["K-pop", "fan culture"],
-    demo: [
-      { rel: "아이돌", out: "안녕하세요! 팬이에요.", note: "해요체 — warm, conversational" },
-      { rel: "선배 팬", out: "안녕하세요~", note: "polite peer register" },
-    ],
-  },
-  {
-    id: "daily_life",
-    kor: "일상",
-    en: "Daily Life",
-    traits: ["social", "everyday"],
-    demo: [
-      { rel: "선배", out: "안녕하세요, 저 왔어요.", note: "해요체 — respectful casual" },
-      { rel: "친구", out: "나 왔어!", note: "반말 — natural" },
-    ],
-  },
-];
-
-type Phase = "hero" | "profiler" | "entering";
-
-export default function LandingPage() {
-  const [phase, setPhase] = useState<Phase>("hero");
-  const [selected, setSelected] = useState<string | null>(null);
-  const [hovered, setHovered] = useState<string | null>(null);
+export default function HomePage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [showMockLoginInput, setShowMockLoginInput] = useState(false);
+  const [tempEmail, setTempEmail] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -73,233 +21,347 @@ export default function LandingPage() {
     }
   }, []);
 
+  const handleMockSignIn = (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = tempEmail.trim() || "mungyuri@gmail.com";
+    localStorage.setItem("mock_user_email", email);
+    setUserEmail(email);
+    setShowMockLoginInput(false);
+  };
+
   const handleSignOut = () => {
     localStorage.removeItem("mock_user_email");
     setUserEmail(null);
   };
 
-  const activeId = hovered || selected || "workplace";
-  const activeCategory = CATEGORIES.find((c) => c.id === activeId)!;
+  const liveCount = CATEGORIES.flatMap((c) => c.lessons).filter((l) => l.status === "live").length;
 
-  function handleStart() {
-    setPhase("profiler");
-    setSelected("workplace");
-  }
-
-  function handleSelect(id: string) {
-    setSelected(id);
-    setPhase("entering");
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("aileen_initial_category", id);
-    }
-    setTimeout(() => {
-      localStorage.setItem("mock_user_email", "mungyuri@gmail.com");
-      window.location.href = "/dashboard";
-    }, 700);
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-s0 flex flex-col">
+        <Nav
+          left={
+            <span className="font-syne text-[11px] font-bold tracking-[0.12em] text-t100">
+              ALIEN&apos;S <span className="text-mint">AILEEN</span>
+            </span>
+          }
+          right={
+            <div className="flex items-center gap-2">
+              <Badge variant="mint" className="hidden sm:inline-flex">{liveCount} live</Badge>
+              <span className="w-16 h-8.5 rounded-full bg-white/[0.04] animate-pulse" />
+            </div>
+          }
+        />
+        <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col" />
+      </main>
+    );
   }
 
   return (
-    <main className="min-h-screen bg-s0 text-white flex flex-col">
-
-      {/* ── NAV ──────────────────────────────────────────── */}
-      <nav className="flex items-center justify-between px-5 py-4 border-b border-b-dim">
-        <span className="font-mono text-[10px] text-t200 tracking-[0.22em]">
-          ALIEN&apos;S <span className="text-mint">AILEEN</span>
-        </span>
-        <div className="flex items-center gap-3.5">
-          {mounted && userEmail ? (
-            <>
-              <a
-                href="/dashboard"
-                className="font-mono text-[10px] tracking-wider uppercase text-mint hover:underline font-bold"
-              >
-                Dashboard
-              </a>
+    <main className="min-h-screen bg-s0 flex flex-col">
+      {/* ── NAV ── */}
+      <Nav
+        left={
+          <span className="font-syne text-[11px] font-bold tracking-[0.12em] text-t100">
+            ALIEN&apos;S <span className="text-mint">AILEEN</span>
+          </span>
+        }
+        right={
+          <div className="flex items-center gap-2">
+            <Badge variant="mint" className="hidden sm:inline-flex">{liveCount} live</Badge>
+            {userEmail ? (
+              <div className="flex items-center gap-2.5">
+                <span className="font-mono text-[9px] text-t300 hidden md:inline-block max-w-[110px] truncate">
+                  {userEmail}
+                </span>
+                <button
+                  onClick={handleSignOut}
+                  className="font-mono text-[10px] tracking-wider uppercase border border-[rgba(255,255,255,0.12)] hover:border-[rgba(255,255,255,0.22)] text-t200 hover:text-t100 rounded-full px-4 py-2 hover:bg-white/[0.04] transition-all font-bold min-h-[38px] flex items-center justify-center"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={handleSignOut}
-                className="font-mono text-[9px] tracking-wider uppercase border border-[rgba(255,255,255,0.12)] text-t300 hover:text-t100 rounded-full px-3 py-1 hover:bg-white/[0.04] transition-all"
+                onClick={() => {
+                  setTempEmail("mungyuri@gmail.com");
+                  setShowMockLoginInput(true);
+                }}
+                className="font-mono text-[10px] tracking-wider uppercase bg-mint text-s0 rounded-full px-4.5 py-2 hover:bg-mint/90 hover:shadow-[0_0_12px_rgba(0,229,180,0.35)] active:scale-[0.98] transition-all font-bold min-h-[38px] flex items-center justify-center"
               >
-                Sign out
+                Sign in
               </button>
-            </>
-          ) : (
-            <>
-              <span className="font-mono text-[9px] text-t400 tracking-widest">5 LIVE</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-mint animate-pulse" />
-            </>
-          )}
-        </div>
-      </nav>
+            )}
+          </div>
+        }
+      />
 
-      {/* ── HERO ─────────────────────────────────────────── */}
-      {phase === "hero" && (
-        <div className="flex-1 flex flex-col px-5 pt-10 pb-8 max-w-xl mx-auto w-full">
-
-          <p className="font-mono text-[9px] text-mint tracking-[0.28em] mb-6">
+      <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col">
+        {/* ── HERO ── */}
+        <section className="px-5 pt-12 pb-10 border-b border-b-dim stagger">
+          <p className="font-caption text-mint mb-5 animate-fade-in">
             / Korean Communication Training /
           </p>
-
-          <h1 className="font-syne text-[clamp(3.2rem,14vw,5.5rem)] font-black leading-[0.88] tracking-tight mb-5">
-            <span className="text-white block">Korean Is</span>
-            <span className="text-mint block">Contextual.</span>
+          <h1 className="font-display-xl leading-[1.05] mb-6 animate-fade-up">
+            Korean Is<br />
+            <span className="text-mint">Contextual.</span>
           </h1>
-
-          <p className="font-mono text-t200 text-sm leading-relaxed mb-8 max-w-sm">
-            The same sentence. Six relationships. Six correct expressions.
-            No existing app teaches this.
+          <p className="font-body text-t300 leading-relaxed max-w-md mb-8 animate-fade-up">
+            Train communication decisions, not memorized translations.
+            The same sentence feels completely different depending on who you&apos;re speaking to.
           </p>
 
-          {/* Flow strip */}
-          <div className="flex items-center gap-1.5 flex-wrap mb-10">
-            {["SITUATION", "RELATIONSHIP", "DECISION", "FEEDBACK", "OUTCOME"].map((s, i) => (
-              <div key={s} className="flex items-center gap-1.5">
-                <span className={`
-                  font-mono text-[9px] tracking-[0.12em] px-2.5 py-1 rounded-full border
-                  ${i < 3 ? "border-mint/50 text-mint" : "border-b-mid text-t400"}
-                `}>
-                  {s}
+          {/* Flow */}
+          <div className="flex items-center gap-2 flex-wrap animate-fade-in">
+            {[
+              { label: "Situation", lit: true },
+              { label: "Relationship", lit: true },
+              { label: "Decision", lit: true },
+              { label: "Feedback", lit: false },
+              { label: "Outcome", lit: false },
+            ].map((n, i, arr) => (
+              <div key={n.label} className="flex items-center gap-2">
+                <span className={`font-mono text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-lg border transition-all ${
+                  n.lit
+                    ? "bg-mint/10 border-mint/30 text-mint font-bold"
+                    : "bg-white/[0.025] border-b-dim text-t400"
+                }`}>
+                  {n.label}
                 </span>
-                {i < 4 && <span className="text-t400 text-[10px]">→</span>}
+                {i < arr.length - 1 && <span className="text-t400 text-xs">→</span>}
               </div>
             ))}
           </div>
+        </section>
 
-          <button
-            onClick={handleStart}
-            className="w-full py-4 rounded-2xl bg-mint text-s0 font-mono text-[11px] font-bold tracking-[0.18em] hover:bg-mint/90 active:scale-[0.98] transition-all mb-3"
-          >
-            BEGIN TRAINING →
-          </button>
-          <p className="text-center font-mono text-[9px] text-t400 tracking-widest">
-            Free to start · Sign in with Google
-          </p>
+        {/* ── CUSTOMIZED ACCESS BLOCK ── */}
+        {!userEmail ? (
+          <section className="mx-5 my-6 p-6 rounded-2xl bg-white/[0.02] border border-[rgba(255,255,255,0.08)] relative overflow-hidden flex flex-col items-center text-center shadow-[0_8px_32px_rgba(0,0,0,0.4)] animate-fade-up">
+            <div className="absolute -top-12 -left-12 w-32 h-32 bg-mint/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-violet/10 rounded-full blur-3xl pointer-events-none" />
+            
+            <span className="font-caption text-mint mb-2">/ To get access, you should sign in :) /</span>
+            <h2 className="font-headline mb-3 text-t100">
+              Unlock Interactive Korean Training
+            </h2>
+            <p className="font-body-sm text-t300 max-w-sm mb-6 leading-relaxed">
+              Sign in with your Google account to get access for valid lessons, check your communication decisions, and get feedback.
+            </p>
+            {showMockLoginInput ? (
+              <form onSubmit={handleMockSignIn} className="w-full max-w-xs flex flex-col gap-2 relative z-10">
+                <input
+                  type="email"
+                  placeholder="Enter email (e.g. mungyuri@gmail.com)"
+                  value={tempEmail}
+                  onChange={(e) => setTempEmail(e.target.value)}
+                  className="w-full font-mono text-xs px-4 py-2 rounded-xl bg-s3 border border-b-mid text-t100 focus:outline-none focus:border-mint"
+                  required
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex-1 font-mono text-[10px] uppercase tracking-wider py-2 bg-mint text-s0 font-bold rounded-xl hover:bg-mint/95 transition-all"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowMockLoginInput(false)}
+                    className="flex-1 font-mono text-[10px] uppercase tracking-wider py-2 bg-white/5 border border-white/10 text-t300 rounded-xl hover:text-t100 transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                onClick={() => {
+                  setTempEmail("mungyuri@gmail.com");
+                  setShowMockLoginInput(true);
+                }}
+                className="font-mono text-[11px] tracking-wider uppercase bg-mint text-s0 rounded-full px-5 py-2.5 hover:bg-mint/90 hover:shadow-[0_0_12px_rgba(0,229,180,0.35)] active:scale-[0.98] transition-all font-bold min-h-[38px] flex items-center justify-center relative z-10"
+              >
+                Sign in with Google
+              </button>
+            )}
+          </section>
+        ) : (
+          <section className="mx-5 my-6 p-6 rounded-2xl bg-white/[0.02] border border-[rgba(255,255,255,0.08)] relative overflow-hidden flex flex-col items-center text-center shadow-[0_8px_32px_rgba(0,0,0,0.4)] animate-fade-up">
+            <div className="absolute -top-12 -left-12 w-32 h-32 bg-mint/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-violet/10 rounded-full blur-3xl pointer-events-none" />
+            
+            <span className="font-caption text-mint mb-2">/ To get access, you should sign in :) /</span>
+            <h2 className="font-headline mb-3 text-t100">
+              Unlock Interactive Korean Training
+            </h2>
+            <p className="font-body-sm text-t300 max-w-sm mb-6 leading-relaxed">
+              Sign in with your Google account to get access for valid lessons, check your communication decisions, and get feedback.
+            </p>
+            <div className="flex items-center gap-3 bg-s3/90 px-5 py-2.5 rounded-full border border-b-mid relative z-10">
+              <span className="w-2.5 h-2.5 rounded-full bg-mint animate-pulse" />
+              <span className="font-mono text-[10px] text-t200 font-bold tracking-wide">
+                {userEmail}
+              </span>
+              <button
+                onClick={handleSignOut}
+                className="font-mono text-[9px] font-bold tracking-wider uppercase border border-white/10 hover:border-white/20 text-t300 hover:text-t100 rounded-full px-3 py-1 transition-all"
+              >
+                Sign Out
+              </button>
+            </div>
+          </section>
+        )}
 
-        </div>
-      )}
+        {/* ── QUICK START CTA ── */}
+        <section className="px-5 py-6 border-b border-b-dim">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link
+              href="/learn/fan_meeting/FM_001"
+              className="group relative p-5 bg-s1 border border-b-mid rounded-2xl hover:border-b-hi hover:bg-white/[0.02] hover:shadow-[0_0_12px_rgba(255,255,255,0.04)] transition-all min-h-[110px] flex flex-col justify-between"
+            >
+              <div>
+                <p className="font-caption text-t400 mb-2">Quick Start</p>
+                <p className="font-headline text-t100 mb-1.5 group-hover:text-mint transition-colors">
+                  Fan Meeting
+                </p>
+                <p className="font-body-sm text-t300">First Greeting · 8 min</p>
+              </div>
+              <div className="absolute right-4 bottom-4 w-8 h-8 rounded-full bg-white/[0.05] group-hover:bg-white/[0.1] flex items-center justify-center transition-colors">
+                <span className="text-t200 text-sm">→</span>
+              </div>
+            </Link>
+            <Link
+              href="/dashboard"
+              className="group relative p-5 bg-s1 border border-b-mid rounded-2xl hover:border-b-hi hover:bg-white/[0.02] hover:shadow-[0_0_12px_rgba(255,255,255,0.04)] transition-all min-h-[110px] flex flex-col justify-between"
+            >
+              <div>
+                <p className="font-caption text-t400 mb-2">Progress</p>
+                <p className="font-headline text-t100 mb-1.5 group-hover:text-mint transition-colors">
+                  My Dashboard
+                </p>
+                <p className="font-body-sm text-t300">Track completions</p>
+              </div>
+              <div className="absolute right-4 bottom-4 w-8 h-8 rounded-full bg-white/[0.05] group-hover:bg-white/[0.1] flex items-center justify-center transition-colors">
+                <span className="text-t200 text-sm">→</span>
+              </div>
+            </Link>
+          </div>
+        </section>
 
-      {/* ── PROFILER ─────────────────────────────────────── */}
-      {(phase === "profiler" || phase === "entering") && (
-        <div className="flex-1 flex flex-col px-5 pt-8 pb-6 max-w-xl mx-auto w-full">
-
-          <p className="font-mono text-[9px] text-mint tracking-[0.28em] mb-5">
-            / RELATIONSHIP PROFILER /
-          </p>
-
-          <h2 className="font-syne text-2xl font-black text-white leading-tight mb-1">
-            Where do you need
-          </h2>
-          <h2 className="font-syne text-2xl font-black text-mint leading-tight mb-2">
-            Korean the most?
-          </h2>
-          <p className="font-mono text-[10px] text-t300 mb-6">
-            Select one to see how it changes everything.
-          </p>
-
-          {/* Category cards */}
-          <div className="flex flex-col gap-2 mb-5">
+        {/* ── CATEGORIES ── */}
+        <section className="px-5 py-8 border-b border-b-dim">
+          <p className="font-caption text-t400 mb-5">Scenario categories</p>
+          <div className="flex flex-col gap-4 stagger">
             {CATEGORIES.map((cat) => {
-              const isActive = selected === cat.id;
+              const live = cat.lessons.filter((l) => l.status === "live").length;
+              const isAvail = live > 0;
+              const glowClass = cat.id === "fan_meeting" ? "glow-fan-meeting" :
+                                cat.id === "dating" ? "glow-dating" :
+                                cat.id === "workplace" ? "glow-workplace" : "glow-daily";
               return (
-                <button
+                <div
                   key={cat.id}
-                  onClick={() => handleSelect(cat.id)}
-                  onMouseEnter={() => setHovered(cat.id)}
-                  onMouseLeave={() => setHovered(null)}
-                  disabled={phase === "entering"}
-                  className={`
-                    w-full text-left p-4 rounded-2xl border transition-all duration-200
-                    ${isActive
-                      ? "border-mint/50 bg-mint/7"
-                      : "border-b-mid bg-white/[0.025] hover:border-b-hi hover:bg-white/[0.04]"
-                    }
-                    ${phase === "entering" && !isActive ? "opacity-30" : ""}
-                  `}
+                  className={cn(
+                    "rounded-2xl border overflow-hidden transition-all duration-300 animate-fade-up glow-card",
+                    glowClass,
+                    isAvail
+                      ? "border-b-mid hover:border-mint/30 hover:shadow-[0_0_24px_rgba(0,0,0,0.4)]"
+                      : "border-b-dim opacity-40"
+                  )}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-baseline gap-3 mb-1">
-                        <span className={`font-syne text-xl font-black ${isActive ? "text-mint" : "text-white"}`}>
-                          {cat.kor}
-                        </span>
-                        <span className={`font-mono text-[11px] font-bold ${isActive ? "text-mint/80" : "text-t200"}`}>
-                          {cat.en}
-                        </span>
-                      </div>
-                      <div className="flex gap-1.5 flex-wrap">
-                        {cat.traits.map((t) => (
-                          <span key={t} className="font-mono text-[8px] px-2 py-0.5 rounded-full border border-b-mid text-t300">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
+                  {isAvail ? (
+                    <Link href={`/learn/${cat.id}`} className="flex group">
+                      <CatContent cat={cat} live={live} />
+                    </Link>
+                  ) : (
+                    <div className="flex">
+                      <CatContent cat={cat} live={live} />
                     </div>
-
-                    {/* Check / uncheck */}
-                    <div className={`
-                      flex-shrink-0 w-5 h-5 rounded-full mt-0.5 flex items-center justify-center
-                      ${isActive ? "bg-mint" : "border border-b-hi"}
-                    `}>
-                      {isActive && (
-                        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                          <path d="M1 3.5L3 5.5L8 1" stroke="#0c0c0e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </div>
-                  </div>
-                </button>
+                  )}
+                </div>
               );
             })}
           </div>
+        </section>
 
-          {/* Live mini-demo */}
-          {activeCategory && (
-            <div className="rounded-2xl border border-mint/20 bg-mint/5 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="font-syne text-base font-black text-white">나 왔어</span>
-                <span className="text-mint/60 text-sm">→</span>
-                <span className="font-mono text-[9px] text-mint/70 tracking-wider">
-                  {activeCategory.en} 선택 시
-                </span>
+        {/* ── WHY DIFFERENT ── */}
+        <section className="px-5 py-8 border-b border-b-dim">
+          <p className="font-caption text-t400 mb-6">Why this is different</p>
+          <div className="grid gap-4 stagger">
+            {[
+              {
+                num: "01",
+                title: "Relationship before vocabulary",
+                body: "Every section adapts based on who you're speaking to. RM vs V. Senior client vs familiar colleague. The content shifts — so does the emotional register.",
+              },
+              {
+                num: "02",
+                title: "Decisions, not drills",
+                body: "You choose between real options and see exactly why one sounds natural while another sounds like a press conference opener.",
+              },
+              {
+                num: "03",
+                title: "The explanation is the lesson",
+                body: "We don't just mark things correct or wrong. We explain the cultural and emotional mechanism behind every tone difference.",
+              },
+            ].map((p) => (
+              <div key={p.num} className="border border-b-dim rounded-2xl p-5 bg-s1 animate-fade-up">
+                <span className="font-mono text-[10px] text-mint font-bold block mb-2">{p.num}</span>
+                <h3 className="font-headline text-t100 mb-2 leading-snug">{p.title}</h3>
+                <p className="font-body-sm text-t300 leading-relaxed">{p.body}</p>
               </div>
-              <div className="flex flex-col gap-2.5">
-                {activeCategory.demo.map((d, i) => (
-                  <div key={i} className={`flex items-baseline gap-3 ${i > 0 ? "opacity-55" : ""}`}>
-                    <span className="font-mono text-[9px] text-t400 tracking-wider min-w-[44px]">
-                      {d.rel}
-                    </span>
-                    <div>
-                      <div className="font-syne text-[17px] font-black text-white leading-tight">
-                        {d.out}
-                      </div>
-                      <div className="font-mono text-[9px] text-t300 mt-0.5">
-                        {d.note}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
+        </section>
 
-          {/* Entering state */}
-          {phase === "entering" && (
-            <div className="flex items-center gap-3 mt-5">
-              <div className="w-4 h-4 border-2 border-mint border-t-transparent rounded-full animate-spin" />
-              <span className="font-mono text-[10px] text-mint tracking-widest">
-                INITIALISING SYSTEM...
-              </span>
-            </div>
-          )}
-
-          {phase === "profiler" && (
-            <p className="mt-4 text-center font-mono text-[9px] text-t400">
-              Sign in with Google · Takes 10 seconds
+        {/* ── FOOTER ── */}
+        <footer className="px-5 py-8 border-t border-b-dim mt-auto">
+          <div className="flex items-center justify-between">
+            <p className="font-caption text-t400">
+              Korean Is Contextual. · Alien&apos;s Aileen
             </p>
-          )}
-
-        </div>
-      )}
-
+            <Link href="/explore" className="font-caption text-t300 hover:text-mint transition-colors">
+              Explore all →
+            </Link>
+          </div>
+        </footer>
+      </div>
     </main>
+  );
+}
+
+function CatContent({ cat, live }: { cat: (typeof CATEGORIES)[0]; live: number }) {
+  return (
+    <>
+      <div className="w-[4px] flex-shrink-0 rounded-l-md" style={{ background: cat.color, opacity: live > 0 ? 1 : 0.3 }} />
+      <div className="flex-1 px-5 py-4.5 z-10">
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-mono text-[10px] tracking-widest text-t400 font-bold">{cat.num}</span>
+          <span
+            className="font-mono text-[9px] tracking-wider uppercase px-2.5 py-0.5 rounded-full border font-bold"
+            style={live > 0 ? { background: `${cat.color}14`, borderColor: `${cat.color}35`, color: `${cat.color}E6` } : {}}
+          >
+            {live > 0 ? `${live} available` : "Preparing"}
+          </span>
+        </div>
+        <h2 className="font-headline text-t100 mb-1.5 group-hover:text-mint transition-colors">{cat.name}</h2>
+        <p className="font-body-sm text-t300 mb-4 leading-relaxed">{cat.tagline}</p>
+        <div className="flex flex-wrap gap-2">
+          {cat.lessons.slice(0, 3).map((l) => (
+            <span
+              key={l.id}
+              className="font-mono text-[9px] px-2.5 py-1 rounded-full border font-medium"
+              style={
+                l.status === "live"
+                  ? { background: `${cat.color}0d`, borderColor: `${cat.color}25`, color: `${cat.color}B3` }
+                  : { borderColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.2)" }
+              }
+            >
+              {l.title}
+            </span>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
