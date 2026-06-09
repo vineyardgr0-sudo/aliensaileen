@@ -204,46 +204,96 @@ export default function LessonClient({ lesson }: Props) {
 
           {/* ══ STEP 2: CHOOSE CONTEXT ══ */}
           {step === 2 && (
-            <StepFade>
-              <p className="font-mono text-[8px] tracking-[0.18em] uppercase text-t400">
-                {lesson.relationship_selection.title}
+            <div className="flex flex-col gap-5 animate-in fade-in duration-300">
+
+              {/* Section label */}
+              <p className="font-mono text-[9px] text-mint tracking-[0.28em]">
+                / RELATIONSHIP /
               </p>
-              <p className="font-mono text-[10px] text-t300 leading-[1.65]">
+
+              {/* Description */}
+              <p className="font-mono text-t300 text-xs leading-relaxed">
                 {lesson.relationship_selection.description}
               </p>
-              <div className="grid grid-cols-2 gap-3">
-                {lesson.relationship_selection.options.map((opt) => (
-                  <button
-                    key={opt.id}
-                    onClick={() => setRelId(opt.id)}
-                    className={cn(
-                      "text-left p-4 rounded-2xl border transition-all",
-                      relId === opt.id
-                        ? "border-2 bg-s2"
-                        : "border-b-mid bg-s1 hover:border-b-hi"
-                    )}
-                    style={relId === opt.id ? { borderColor: catColor, background: `${catColor}08` } : {}}
-                  >
-                    <p className="font-syne text-[13px] font-bold text-t100 mb-1">{opt.label}</p>
-                    <p className="font-mono text-[8.5px] text-t400 mb-2">{opt.summary}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {opt.communication_traits.slice(0, 3).map((t) => (
-                        <span key={t} className="font-mono text-[7.5px] px-2 py-0.5 rounded-full bg-b-dim text-t400">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </button>
-                ))}
+
+              {/* Relationship cards */}
+              <div className="flex flex-col gap-3">
+                {lesson.relationship_selection.options.map((opt) => {
+                  const isSelected = relId === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => setRelId(opt.id)}
+                      className={`
+                        w-full text-left p-5 rounded-2xl border transition-all duration-200
+                        ${isSelected
+                          ? "border-mint/50 bg-mint/[0.07]"
+                          : "border-b-mid bg-white/[0.03] hover:border-b-hi hover:bg-white/[0.05]"
+                        }
+                      `}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline gap-3 mb-1.5">
+                            <span className={`font-syne text-xl font-black ${isSelected ? "text-mint" : "text-white"}`}>
+                              {opt.label}
+                            </span>
+                          </div>
+                          <p className="font-mono text-xs text-t300 leading-snug mb-2">
+                            {opt.summary}
+                          </p>
+                          {opt.communication_traits && opt.communication_traits.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {opt.communication_traits.slice(0, 3).map((trait) => (
+                                <span key={trait} className="font-mono text-[9px] px-2 py-0.5 rounded-full border border-b-mid text-t300">
+                                  {trait}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className={`
+                          flex-shrink-0 w-5 h-5 rounded-full border mt-0.5 flex items-center justify-center
+                          transition-all duration-200
+                          ${isSelected ? "border-mint bg-mint" : "border-b-hi"}
+                        `}>
+                          {isSelected && (
+                            <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                              <path d="M1 3.5L3 5.5L8 1" stroke="#0c0c0e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-              <CtaButton
+
+              {/* Output preview — appears immediately when selected */}
+              {relId && decVariant && (
+                <div className="rounded-2xl border border-mint/20 bg-mint/[0.04] p-5">
+                  <p className="font-mono text-[9px] text-mint tracking-[0.25em] mb-3">
+                    OUTPUT PREVIEW
+                  </p>
+                  <p className="font-syne text-2xl font-black text-white mb-1">
+                    {decVariant.options.find(o => o.tag === "correct")?.text}
+                  </p>
+                  <p className="font-mono text-xs text-t300 leading-relaxed">
+                    {decVariant.options.find(o => o.tag === "correct")?.feedback}
+                  </p>
+                </div>
+              )}
+
+              {/* Continue button */}
+              <button
                 onClick={() => goStep(3)}
                 disabled={!relId}
-                catColor={catColor}
+                className="w-full py-4 rounded-2xl bg-mint/10 border border-mint/30 text-mint font-mono text-xs tracking-widest hover:bg-mint/15 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
               >
-                Continue →
-              </CtaButton>
-            </StepFade>
+                CONTINUE →
+              </button>
+
+            </div>
           )}
 
           {/* ══ STEP 3: DECISION ══ */}
@@ -300,79 +350,126 @@ export default function LessonClient({ lesson }: Props) {
 
           {/* ══ STEP 4: FEEDBACK ══ */}
           {step === 4 && chosenOpt && (
-            <StepFade>
-              <p className="font-mono text-[8px] tracking-[0.18em] uppercase text-t400">Feedback</p>
+            <div className="flex flex-col gap-4 animate-in fade-in duration-300">
 
-              {/* Result banner */}
-              <div className={cn(
-                "rounded-2xl p-5 border",
-                chosenOpt.tag === "correct"
-                  ? "bg-[rgba(16,185,129,0.07)] border-[rgba(16,185,129,0.3)]"
-                  : "bg-[rgba(239,68,68,0.06)] border-[rgba(239,68,68,0.25)]"
-              )}>
-                <p className={cn(
-                  "font-syne text-[18px] font-extrabold mb-2",
-                  chosenOpt.tag === "correct" ? "text-emerald-400" : "text-red-400"
-                )}>
-                  {chosenOpt.tag === "correct" ? "✓ Correct" : "✗ Not quite"}
-                </p>
-                <p className="font-mono text-[10px] text-t300 leading-[1.7]">{chosenOpt.feedback}</p>
-                {chosenOpt.explanation && (
-                  <div className="mt-3 pt-3 border-t border-[rgba(255,255,255,0.06)]">
-                    <p className="font-syne text-[12px] font-bold text-t200 mb-1">
-                      {chosenOpt.explanation.title}
-                    </p>
-                    <p className="font-mono text-[9.5px] text-t300 leading-[1.7] mb-2">
+              {/* Section label */}
+              <p className="font-mono text-[9px] text-mint tracking-[0.28em]">
+                FEEDBACK
+              </p>
+
+              {/* ── HERO: Cultural insight ── */}
+              {chosenOpt.explanation?.title && (
+                <div className="mb-2">
+                  <h2 className="font-syne text-[34px] font-black text-white leading-[1.05] mb-3">
+                    {chosenOpt.tag === "wrong" || chosenOpt.tag === "neutral" ? (
+                      <>
+                        <span className="text-red-400">
+                          {chosenOpt.explanation.title.split(" ")[0]}
+                        </span>
+                        {" "}
+                        {chosenOpt.explanation.title.split(" ").slice(1).join(" ")}
+                      </>
+                    ) : (
+                      <span className="text-mint">{chosenOpt.explanation.title}</span>
+                    )}
+                  </h2>
+                  {chosenOpt.explanation.description && (
+                    <p className="font-mono text-t200 text-sm leading-relaxed">
                       {chosenOpt.explanation.description}
                     </p>
-                    <ul className="flex flex-col gap-1">
-                      {chosenOpt.explanation.details.map((d: string, i: number) => (
-                        <li key={i} className="font-mono text-[9px] text-t400 flex items-start gap-1.5">
-                          <span className="mt-0.5 text-t400">·</span>{d}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              {/* Reference comparison — always shown */}
-              {decVariant && (
-                <div className="bg-s1 border border-b-dim rounded-2xl overflow-hidden">
-                  <p className="font-mono text-[7.5px] tracking-[0.18em] uppercase text-t400 px-4 py-3 border-b border-b-dim">
-                    Why it sounds that way
-                  </p>
-                  {decVariant.options.map((opt, i) => {
-                    const isNatural  = opt.tag === "correct";
-                    const isCasual   = opt.tag === "neutral";
-                    const isFormal   = opt.tag === "wrong" && !isCasual;
-                    const tagLabel   = isNatural ? "Natural" : isCasual ? "Too casual" : "Too formal";
-                    const tagStyle   = isNatural
-                      ? { background: "rgba(16,185,129,0.12)", color: "#34d399" }
-                      : isCasual
-                      ? { background: "rgba(245,158,11,0.12)", color: "#fbbf24" }
-                      : { background: "rgba(239,68,68,0.1)", color: "#f87171" };
-                    const why = opt.explanation?.formality_analysis?.why_wrong
-                      ?? (isNatural ? opt.feedback : opt.explanation?.details[0] ?? "");
-                    return (
-                      <div key={i} className="flex items-start gap-3 px-4 py-3 border-b border-b-dim last:border-b-0">
-                        <span className="font-mono text-[7px] tracking-[0.1em] uppercase px-2 py-0.5 rounded flex-shrink-0 mt-0.5 whitespace-nowrap" style={tagStyle}>
-                          {tagLabel}
-                        </span>
-                        <div>
-                          <p className="font-syne text-[15px] font-bold text-t100 mb-0.5">{opt.text}</p>
-                          <p className="font-mono text-[8.5px] text-t400 leading-[1.55]">{why}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  )}
                 </div>
               )}
 
-              <CtaButton onClick={() => goStep(5)} catColor={catColor}>
-                Continue →
-              </CtaButton>
-            </StepFade>
+              {/* Fallback if no explanation title: show feedback as hero */}
+              {!chosenOpt.explanation?.title && (
+                <h2 className={`font-syne text-3xl font-black leading-tight mb-2 ${
+                  chosenOpt.tag === "correct" ? "text-mint" : "text-red-400"
+                }`}>
+                  {chosenOpt.feedback}
+                </h2>
+              )}
+
+              <div className="h-px bg-b-dim" />
+
+              {/* Comparison options — now SECONDARY to the hero */}
+              {relId && decVariant && (
+                <div className="flex flex-col gap-2.5">
+                  {decVariant.options.map((opt) => (
+                    <div
+                      key={opt.text}
+                      className={`p-4 rounded-2xl border ${
+                        opt.tag === "correct"
+                          ? "border-mint/40 bg-mint/[0.06]"
+                          : opt.tag === "wrong"
+                          ? "border-red-400/35 bg-red-400/[0.05]"
+                          : "border-amber-400/30 bg-amber-400/[0.04]"
+                      }`}
+                    >
+                      {/* Tag label */}
+                      <p className={`font-mono text-[9px] tracking-[0.2em] mb-2 ${
+                        opt.tag === "correct" ? "text-mint"
+                        : opt.tag === "wrong" ? "text-red-400"
+                        : "text-amber-400"
+                      }`}>
+                        {opt.tag === "correct" ? "NATURAL"
+                         : opt.tag === "wrong" ? "NOT QUITE"
+                         : "ACCEPTABLE"}
+                      </p>
+                      <p className="font-syne text-[17px] font-black text-white mb-1">
+                        {opt.text}
+                      </p>
+                      <p className="font-mono text-xs text-t300 leading-relaxed">
+                        {opt.feedback}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Why it sounds that way — collapsible */}
+              {chosenOpt.explanation && chosenOpt.explanation.details && chosenOpt.explanation.details.length > 0 && (
+                <details className="rounded-2xl border border-b-mid bg-white/[0.02] overflow-hidden">
+                  <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
+                    <span className="font-mono text-[9px] text-t400 tracking-[0.2em]">
+                      WHY IT SOUNDS THAT WAY
+                    </span>
+                    <span className="text-t400 text-xs">↓</span>
+                  </summary>
+                  <div className="px-4 pb-4 border-t border-b-dim pt-3">
+                    <ul className="flex flex-col gap-2">
+                      {chosenOpt.explanation.details.map((d, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-mint font-mono text-xs mt-0.5 flex-shrink-0">·</span>
+                          <span className="font-mono text-xs text-t300 leading-snug">{d}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {chosenOpt.explanation.natural_alternative && chosenOpt.explanation.natural_alternative.length > 0 && (
+                      <div className="mt-3 p-3 rounded-xl bg-mint/[0.08] border border-mint/20">
+                        <p className="font-mono text-[9px] text-mint tracking-widest mb-2">
+                          NATURAL ALTERNATIVE
+                        </p>
+                        {chosenOpt.explanation.natural_alternative.map((alt, i) => (
+                          <p key={i} className="font-syne text-base font-black text-white">
+                            {alt}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </details>
+              )}
+
+              {/* Continue */}
+              <button
+                onClick={() => goStep(5)}
+                className="w-full py-4 rounded-2xl border border-b-mid bg-white/[0.04] text-t300 font-mono text-xs tracking-[0.2em] hover:bg-white/[0.07] hover:text-t100 active:scale-[0.98] transition-all"
+              >
+                CONTINUE →
+              </button>
+
+            </div>
           )}
 
           {/* ══ STEP 5: KEY LANGUAGE ══ */}
@@ -592,7 +689,9 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
     if (!analyser) return;
     const buf = new Float32Array(analyser.fftSize);
     function frame() {
-      analyser.getFloatTimeDomainData(buf);
+      const activeAnalyser = analyserRef.current;
+      if (!activeAnalyser) return;
+      activeAnalyser.getFloatTimeDomainData(buf);
       drawBars(buf, true);
       const audio = audioRef.current;
       if (audio) setProgress(audio.currentTime / (audio.duration || 1));
