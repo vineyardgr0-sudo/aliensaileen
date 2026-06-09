@@ -408,11 +408,7 @@ export default function LessonClient({ lesson }: Props) {
                       <AudioPlayer src={audioSrc} catColor={catColor} />
                       <p className="font-mono text-[8.5px] mt-2 mb-2" style={{ color: `${catColor}70` }}>{ph.pronunciation}</p>
                       <p className="font-mono text-[10px] text-t300 mb-3">{ph.english}</p>
-                      <PracticeRecorder
-                        phraseKey={`${lesson.meta.id}-${relId}-ph${idx}`}
-                        catColor={catColor}
-                      />
-                      <div className="px-3 py-2 rounded-lg bg-s2 mt-3">
+                      <div className="px-3 py-2 rounded-lg bg-s2">
                         <p className="font-mono text-[9px] text-t300 leading-[1.65]">{ph.why_it_works}</p>
                       </div>
                     </div>
@@ -548,19 +544,20 @@ export default function LessonClient({ lesson }: Props) {
 
 // ── Audio Player ──────────────────────────────────────────────────
 function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
-  const canvasRef   = useRef<HTMLCanvasElement>(null);
-  const audioRef    = useRef<HTMLAudioElement | null>(null);
-  const rafRef      = useRef<number>(0);
-  const audioCtxRef = useRef<any>(null);
-  const analyserRef = useRef<any>(null);
-
-  const [playing,  setPlaying]  = useState(false);
-  const [error,    setError]    = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioRef  = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying]   = useState(false);
+  const [loaded,  setLoaded]    = useState(false);
+  const [error,   setError]     = useState(false);
   const [progress, setProgress] = useState(0);
+  const rafRef = useRef<number>(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef   = useRef<MediaElementAudioSourceNode | null>(null);
 
+  // Draw static bars on mount
   useEffect(() => {
     drawBars(new Float32Array(64).fill(0.08), false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function drawBars(data: Float32Array, active: boolean) {
@@ -568,21 +565,24 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const W = canvas.clientWidth || 200;
+    const W = canvas.offsetWidth || 200;
     const H = 36;
     canvas.width  = W;
     canvas.height = H;
     ctx.clearRect(0, 0, W, H);
-    const barW = 3, gap = 2, step = barW + gap;
-    const bars = Math.floor(W / step);
-    ctx.globalAlpha = active ? 0.9 : 0.4;
-    ctx.fillStyle   = active ? catColor : "rgba(255,255,255,0.5)";
+    const barW = 3, gap = 2, total = barW + gap;
+    const bars = Math.floor(W / total);
     for (let i = 0; i < bars; i++) {
-      const idx = Math.floor((i / bars) * data.length);
-      const amp = Math.min(1, Math.abs(data[idx] || 0.06));
-      const h   = Math.max(3, amp * H * 0.88);
-      const y   = (H - h) / 2;
-      ctx.fillRect(i * step, y, barW, h);
+      const idx = Math.floor(i / bars * data.length);
+      const amp  = Math.min(1, Math.abs(data[idx] || 0.06));
+      const h    = Math.max(3, amp * H * 0.9);
+      const y    = (H - h) / 2;
+      ctx.fillStyle = active ? catColor : "rgba(255,255,255,0.18)";
+      ctx.globalAlpha = active ? 0.85 : 0.5;
+      ctx.beginPath();
+      (ctx as any).roundRect?.(i * total, y, barW, h, 1.5) ??
+        ctx.rect(i * total, y, barW, h);
+      ctx.fill();
     }
     ctx.globalAlpha = 1;
   }
@@ -590,21 +590,14 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
   function animateWave() {
     const analyser = analyserRef.current;
     if (!analyser) return;
-    const buf = new Float32Array((analyser as any).fftSize);
+    const buf = new Float32Array(analyser.fftSize);
     function frame() {
-      const a = analyserRef.current;
+      analyser.getFloatTimeDomainData(buf);
+      drawBars(buf, true);
       const audio = audioRef.current;
-      if (a) {
-        (a as any).getFloatTimeDomainData(buf);
-        drawBars(buf, true);
-      }
       if (audio) setProgress(audio.currentTime / (audio.duration || 1));
-      if (audio && !audio.paused) {
-        rafRef.current = requestAnimationFrame(frame);
-      } else {
-        drawBars(new Float32Array(64).fill(0.08), false);
-        setProgress(0);
-      }
+      if (!audioRef.current?.paused) rafRef.current = requestAnimationFrame(frame);
+      else { drawBars(new Float32Array(64).fill(0.08), false); setProgress(0); }
     }
     rafRef.current = requestAnimationFrame(frame);
   }
@@ -612,37 +605,29 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
   async function toggle() {
     if (error) return;
 
+    // Lazy-init audio
     if (!audioRef.current) {
       const audio = new Audio(src);
       audio.preload = "auto";
+      audio.oncanplaythrough = () => setLoaded(true);
       audio.onerror = () => setError(true);
-      audio.onended = () => {
-        setPlaying(false);
-        setProgress(0);
-        drawBars(new Float32Array(64).fill(0.08), false);
-      };
+      audio.onended = () => { setPlaying(false); setProgress(0); drawBars(new Float32Array(64).fill(0.08), false); };
       audioRef.current = audio;
 
-      try {
-        const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
-        if (AC) {
-          const ctx     = new AC();
-          const analyser = ctx.createAnalyser();
-          analyser.fftSize = 256;
-          const source  = ctx.createMediaElementSource(audio);
-          source.connect(analyser);
-          analyser.connect(ctx.destination);
-          audioCtxRef.current = ctx;
-          analyserRef.current = analyser;
-        }
-      } catch (_) {
-        // Web Audio API unavailable — playback still works
-      }
+      // Web Audio API setup
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      const source = ctx.createMediaElementSource(audio);
+      source.connect(analyser);
+      analyser.connect(ctx.destination);
+      audioCtxRef.current = ctx;
+      analyserRef.current = analyser;
+      sourceRef.current   = source;
     }
 
     const audio = audioRef.current;
-    const actx = audioCtxRef.current as any;
-    if (actx?.state === "suspended") await actx.resume();
+    if (audioCtxRef.current?.state === "suspended") await audioCtxRef.current.resume();
 
     if (playing) {
       audio.pause();
@@ -650,49 +635,37 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
       cancelAnimationFrame(rafRef.current);
       drawBars(new Float32Array(64).fill(0.08), false);
     } else {
-      try {
-        await audio.play();
-        setPlaying(true);
-        if (analyserRef.current) animateWave();
-      } catch (_) {
-        setError(true);
-      }
+      await audio.play();
+      setPlaying(true);
+      animateWave();
     }
   }
 
   if (error) return null;
-
-  const iconFill = catColor === "#00e5b4" ? "#0a0a0b" : "#ffffff";
 
   return (
     <div className="flex items-center gap-2 mt-2">
       <button
         onClick={toggle}
         aria-label={playing ? "Stop" : "Play pronunciation"}
-        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 border transition-all"
-        style={{ background: playing ? catColor : `${catColor}18`, borderColor: `${catColor}50` }}
+        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all border"
+        style={{
+          background: playing ? catColor : `${catColor}18`,
+          borderColor: `${catColor}50`,
+        }}
       >
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          {playing ? (
-            <>
-              <rect x="2"   y="2" width="2.2" height="6" rx="0.4" fill={iconFill} />
-              <rect x="5.8" y="2" width="2.2" height="6" rx="0.4" fill={iconFill} />
-            </>
-          ) : (
-            <path d="M3 2l5 3-5 3V2z" fill={catColor} />
-          )}
+          {playing
+            ? <><rect x="2" y="2" width="2.5" height="6" rx="0.5" fill={catColor === "#00e5b4" ? "#0a0a0b" : "#fff"}/><rect x="5.5" y="2" width="2.5" height="6" rx="0.5" fill={catColor === "#00e5b4" ? "#0a0a0b" : "#fff"}/></>
+            : <path d="M3 2l5 3-5 3V2z" fill={catColor}/>
+          }
         </svg>
       </button>
       <div className="flex-1 relative">
-        <canvas
-          ref={canvasRef}
-          style={{ width: "100%", height: "36px", display: "block" }}
-        />
+        <canvas ref={canvasRef} style={{ width: "100%", height: "36px", display: "block" }} />
         {playing && (
-          <div
-            className="absolute bottom-0 left-0 h-[2px] rounded-full"
-            style={{ width: `${Math.round(progress * 100)}%`, background: catColor, transition: "width 0.1s linear" }}
-          />
+          <div className="absolute bottom-0 left-0 h-[2px] transition-all rounded-full"
+            style={{ width: `${progress * 100}%`, background: catColor }} />
         )}
       </div>
     </div>
@@ -934,212 +907,6 @@ function MiniQuiz({
           Check all answers to continue
         </p>
       )}
-    </div>
-  );
-}
-
-// ── Practice Recorder ─────────────────────────────────────────────
-// Mic recording + waveform comparison — no AI, no cost
-// Uses MediaRecorder API + Web Audio API only
-function PracticeRecorder({
-  phraseKey,
-  catColor,
-}: {
-  phraseKey: string;
-  catColor: string;
-}) {
-  const [state, setState]       = useState<"idle" | "recording" | "done">("idle");
-  const [duration, setDuration] = useState<number | null>(null);
-  const [error, setError]       = useState(false);
-
-  const canvasRef  = useRef<HTMLCanvasElement>(null);
-  const mediaRef   = useRef<any>(null);
-  const blobRef    = useRef<Blob | null>(null);
-  const audioRef   = useRef<HTMLAudioElement | null>(null);
-  const rafRef     = useRef<number>(0);
-  const ctxRef     = useRef<any>(null);
-  const analyRef   = useRef<any>(null);
-  const startRef   = useRef<number>(0);
-
-  // draw flat line on mount
-  useEffect(() => { drawFlat(); }, []);
-
-  function drawFlat() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const W = canvas.clientWidth || 260;
-    canvas.width = W; canvas.height = 36;
-    ctx.clearRect(0, 0, W, 36);
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
-    ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.moveTo(0, 18); ctx.lineTo(W, 18); ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  function drawBars(data: Float32Array, color: string) {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const W = canvas.clientWidth || 260;
-    canvas.width = W; canvas.height = 36;
-    ctx.clearRect(0, 0, W, 36);
-    const step = 5;
-    const bars = Math.floor(W / step);
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.85;
-    for (let i = 0; i < bars; i++) {
-      const idx = Math.floor((i / bars) * data.length);
-      const amp = Math.min(1, Math.abs(data[idx] || 0.05));
-      const h = Math.max(2, amp * 32);
-      ctx.fillRect(i * step, (36 - h) / 2, 3, h);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function animateRecord() {
-    if (!analyRef.current) return;
-    const buf = new Float32Array((analyRef.current as any).fftSize);
-    function frame() {
-      if (!analyRef.current) return;
-      (analyRef.current as any).getFloatTimeDomainData(buf);
-      drawBars(buf, "#ef4444");
-      rafRef.current = requestAnimationFrame(frame);
-    }
-    rafRef.current = requestAnimationFrame(frame);
-  }
-
-  async function startRecord() {
-    setError(false);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (AC) {
-        const ctx = new AC();
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 256;
-        const src = ctx.createMediaStreamSource(stream);
-        src.connect(analyser);
-        ctxRef.current  = ctx;
-        analyRef.current = analyser;
-      }
-
-      const chunks: Blob[] = [];
-      const mr = new MediaRecorder(stream);
-      mr.ondataavailable = (e) => chunks.push(e.data);
-      mr.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        blobRef.current = blob;
-        const url = URL.createObjectURL(blob);
-        audioRef.current = new Audio(url);
-        audioRef.current.onloadedmetadata = () => {
-          setDuration(Math.round((audioRef.current?.duration ?? 0) * 10) / 10);
-        };
-        const final = new Float32Array(64);
-        if (analyRef.current) {
-          (analyRef.current as any).getFloatTimeDomainData(final);
-        }
-        drawBars(final, catColor);
-        setState("done");
-      };
-      mediaRef.current = mr;
-      mr.start();
-      startRef.current = Date.now();
-      setState("recording");
-      animateRecord();
-    } catch (_) {
-      setError(true);
-    }
-  }
-
-  function stopRecord() {
-    cancelAnimationFrame(rafRef.current);
-    mediaRef.current?.stop();
-  }
-
-  function playBack() {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = 0;
-    audioRef.current.play();
-  }
-
-  function reset() {
-    cancelAnimationFrame(rafRef.current);
-    mediaRef.current?.stop();
-    blobRef.current  = null;
-    audioRef.current = null;
-    setDuration(null);
-    setState("idle");
-    drawFlat();
-  }
-
-  if (error) return null;
-
-  return (
-    <div className="mt-2 border border-b-dim rounded-xl overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-b-dim">
-        <span className="font-mono text-[8px] tracking-[0.16em] uppercase text-t400">Practice</span>
-        {duration !== null && (
-          <span className="font-mono text-[8px] text-t400">{duration}s recorded</span>
-        )}
-      </div>
-
-      {/* Waveform canvas */}
-      <div className="px-3 py-2 bg-s2">
-        <canvas
-          ref={canvasRef}
-          style={{ width: "100%", height: "36px", display: "block" }}
-        />
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center gap-2 px-3 py-2.5">
-        {state === "idle" && (
-          <button
-            onClick={startRecord}
-            className="flex items-center gap-1.5 font-mono text-[9px] tracking-[0.1em] uppercase px-3 py-1.5 rounded-lg border border-b-mid text-t300 hover:text-t100 hover:border-b-hi transition-all"
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <circle cx="5" cy="5" r="3.5" fill="#ef4444" />
-            </svg>
-            Record
-          </button>
-        )}
-
-        {state === "recording" && (
-          <button
-            onClick={stopRecord}
-            className="flex items-center gap-1.5 font-mono text-[9px] tracking-[0.1em] uppercase px-3 py-1.5 rounded-lg border border-[rgba(239,68,68,0.4)] text-red-400 hover:bg-[rgba(239,68,68,0.06)] transition-all"
-          >
-            <span className="w-2 h-2 rounded-sm bg-red-400 animate-pulse" />
-            Stop
-          </button>
-        )}
-
-        {state === "done" && (
-          <>
-            <button
-              onClick={playBack}
-              className="flex items-center gap-1.5 font-mono text-[9px] tracking-[0.1em] uppercase px-3 py-1.5 rounded-lg border border-b-mid text-t300 hover:text-t100 transition-all"
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M3 2l5 3-5 3V2z" fill="currentColor" />
-              </svg>
-              Play back
-            </button>
-            <button
-              onClick={reset}
-              className="font-mono text-[9px] tracking-[0.1em] uppercase px-3 py-1.5 rounded-lg border border-b-dim text-t400 hover:text-t300 transition-all"
-            >
-              Retry
-            </button>
-          </>
-        )}
-      </div>
     </div>
   );
 }
