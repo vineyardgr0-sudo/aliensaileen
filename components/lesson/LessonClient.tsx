@@ -12,6 +12,7 @@ import DialogueSection from "./DialogueSection";
 import ToneGuidance from "./ToneGuidance";
 import QuizSection from "./QuizSection";
 import { ShadowingCard } from "@/components/ui/ShadowingCard";
+import { CATEGORIES } from "@/data/categories";
 
 interface Props {
   lesson: Lesson;
@@ -26,12 +27,6 @@ export default function LessonClient({ lesson }: Props) {
   const [decisionDone, setDecisionDone] = useState(false);
   const [chosenOption, setChosenOption] = useState<DecisionOption | null>(null);
   const [quizComplete, setQuizComplete] = useState(false);
-
-  // ShadowingCard state
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [hasRecording, setHasRecording] = useState(false);
-  const waveformRef = useRef<HTMLCanvasElement>(null);
 
   // Inline Tone Corrector state
   const [toneText, setToneText] = useState("");
@@ -61,9 +56,6 @@ export default function LessonClient({ lesson }: Props) {
     setDecisionDone(false);
     setChosenOption(null);
     setQuizComplete(false);
-    setIsPlaying(false);
-    setIsRecording(false);
-    setHasRecording(false);
     setToneText("");
     setToneAnalysis("");
     setToneAnalyzed(false);
@@ -106,6 +98,9 @@ export default function LessonClient({ lesson }: Props) {
   const correctOption = currentVariant?.options.find((o) => o.tag === "correct");
   const phrases = lesson.phrases[selectedRel] ?? [];
   const firstPhrase = phrases[0];
+
+  const categoryInfo = CATEGORIES.find((c) => c.id === lesson.meta.category);
+  const catColor = categoryInfo?.color ?? "#00e5b4";
 
   return (
     <main className="min-h-screen bg-ink pb-24" ref={topRef}>
@@ -267,15 +262,20 @@ export default function LessonClient({ lesson }: Props) {
           {firstPhrase && (
             <div className="mt-5">
               <ShadowingCard
-                phrase={firstPhrase}
-                isPlaying={isPlaying}
-                isRecording={isRecording}
-                hasRecording={hasRecording}
-                waveformRef={waveformRef}
-                onPlay={() => setIsPlaying((v) => !v)}
-                onRecord={() => setIsRecording(true)}
-                onStopRecord={() => { setIsRecording(false); setHasRecording(true); }}
-                onPlayback={() => setIsPlaying((v) => !v)}
+                korean={firstPhrase.korean}
+                pronunciation={firstPhrase.pronunciation}
+                english={firstPhrase.english}
+                tip={firstPhrase.why_it_works}
+                audioSrc={
+                  firstPhrase.audio_url ||
+                  (lesson.meta.id.toUpperCase() === "FM_001"
+                    ? `/audio/FM_001/${
+                        selectedRel === "v" || selectedRel === "rm_infp" ? "v" : "rm"
+                      }/ph_01.m4a`
+                    : `/audio/${lesson.meta.id}/${selectedRel}/ph_01.m4a`)
+                }
+                catColor={catColor}
+                enablePractice={true}
               />
             </div>
           )}
