@@ -4,6 +4,7 @@ import BM_001 from "@/data/lessons/BM_001";
 import DT_001 from "@/data/lessons/DT_001";
 import DL_005 from "@/data/lessons/DL_005";
 import DL_006 from "@/data/lessons/DL_006";
+import WP_004 from "@/data/lessons/WP_004";
 
 // ── LESSON REGISTRY ──────────────────────────────────────────────
 // To add a lesson:
@@ -19,8 +20,11 @@ const REGISTRY: Record<string, Lesson> = {
   DT_001,
   DL_005,
   DL_006,
+  WP_004,
   // FM_002,  // preparing
   // WP_001,  // preparing
+  // WP_002,  // preparing
+  // WP_003,  // preparing — Group Dinner (회식) Dynamics
   // DL_001,  // preparing
 };
 

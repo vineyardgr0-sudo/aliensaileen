@@ -29,6 +29,7 @@ export const CATEGORIES: CategoryManifest[] = [
     description: "Korean business communication. The invisible rules of first meetings, hierarchy, 회식 dynamics, and how to sound both professional and human.",
     lessons: [
       { id: "BM_001", title: "First Business Meeting", sub: "Korean client · Senior or peer · Beginner", status: "live", level: "beginner", estimated_minutes: 10 },
+      { id: "WP_004", title: "Responding to Feedback", sub: "Office · 선배/상사 or 동료 · Intermediate", status: "live", level: "intermediate", estimated_minutes: 10 },
       { id: "WP_001", title: "First Day — Team Introduction", sub: "Office · Junior to senior · Beginner", status: "preparing", level: "beginner", estimated_minutes: 9 },
       { id: "WP_002", title: "Senior vs Peer Tone Shift", sub: "Office · Intermediate", status: "preparing", level: "intermediate", estimated_minutes: 10 },
       { id: "WP_003", title: "Group Dinner (회식) Dynamics", sub: "Evening · Intermediate", status: "preparing", level: "intermediate", estimated_minutes: 12 },
