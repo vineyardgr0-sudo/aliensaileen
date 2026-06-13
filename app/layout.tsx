@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Syne, DM_Mono } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
-import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import ServiceWorkerRegister from "./ServiceWorkerRegister";
 import "./globals.css";
 
 const syne = Syne({
@@ -55,7 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         {children}
-        <ServiceWorkerRegistration />
+        <ServiceWorkerRegister />
       </body>
       {gaId && <GoogleAnalytics gaId={gaId} />}
     </html>
