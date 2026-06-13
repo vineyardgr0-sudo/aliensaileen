@@ -412,6 +412,7 @@ export default function LessonClient({ lesson }: Props) {
                         phraseKey={`${lesson.meta.id}-${relId}-ph${idx}`}
                         catColor={catColor}
                         referenceAudioSrc={audioSrc}
+                        targetText={ph.korean}
                       />
                       <div className="px-3 py-2 rounded-lg bg-s2 mt-3">
                         <p className="font-mono text-[9px] text-t300 leading-[1.65]">{ph.why_it_works}</p>
@@ -949,10 +950,9 @@ function MiniQuiz({
 // ── localStorage helpers for practice self-assessment ────────────
 const PRACTICE_KEY = "aa_practice_v1";
 
-type AssessmentValue = "similar" | "different" | "retry";
-
 interface PracticeEntry {
-  lastAssessment: AssessmentValue;
+  lastScore: number;
+  lastLabel: string;
   timestamp: number;
   recordCount: number;
 }
@@ -965,11 +965,12 @@ function loadPracticeStore(): Record<string, PracticeEntry> {
   }
 }
 
-function savePracticeEntry(phraseKey: string, assessment: AssessmentValue, prevCount: number) {
+function savePracticeEntry(phraseKey: string, score: number, label: string, prevCount: number) {
   try {
     const store = loadPracticeStore();
     store[phraseKey] = {
-      lastAssessment: assessment,
+      lastScore: score,
+      lastLabel: label,
       timestamp: Date.now(),
       recordCount: prevCount + 1,
     };
@@ -984,11 +985,390 @@ function PracticeRecorder({
   phraseKey,
   catColor,
   referenceAudioSrc,
+  targetText,
 }: {
   phraseKey: string;
   catColor: string;
   referenceAudioSrc?: string;
+  targetText?: string;
 }) {
+  const [state, setState]       = useState<"idle" | "recording" | "done">("idle");
+  const [duration, setDuration] = useState<number | null>(null);
+  const [error, setError]       = useState(false);
+  const [recordCount, setRecordCount] = useState<number>(0);
+
+  // Whisper evaluation state
+  const [evalState, setEvalState] = useState<"idle" | "loading" | "done">("idle");
+  const [score, setScore]         = useState<number | null>(null);
+  const [feedback, setFeedback]   = useState<{
+    label: string; emoji: string; message: string;
+  } | null>(null);
+
+  // Two canvases: Aileen reference (top) + user recording (bottom)
+  const refCanvasRef  = useRef<HTMLCanvasElement>(null);
+  const userCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  const mediaRef  = useRef<any>(null);
+  const blobRef   = useRef<Blob | null>(null);
+  const audioRef  = useRef<HTMLAudioElement | null>(null);
+  const rafRef    = useRef<number>(0);
+  const ctxRef    = useRef<any>(null);
+  const analyRef  = useRef<any>(null);
+
+  // Load previous score from localStorage on mount
+  useEffect(() => {
+    const store = loadPracticeStore();
+    if (store[phraseKey]) {
+      setRecordCount(store[phraseKey].recordCount);
+    }
+  }, [phraseKey]);
+
+  // Pre-compute Aileen reference waveform on mount
+  useEffect(() => {
+    drawFlatOnCanvas(refCanvasRef, "rgba(255,255,255,0.08)");
+    drawFlatOnCanvas(userCanvasRef, "rgba(255,255,255,0.12)");
+
+    if (!referenceAudioSrc) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (!AC) return;
+        const res = await fetch(referenceAudioSrc);
+        if (!res.ok || cancelled) return;
+        const arrayBuf = await res.arrayBuffer();
+        if (cancelled) return;
+        const ac = new AC();
+        const audioBuf = await ac.decodeAudioData(arrayBuf);
+        if (cancelled) return;
+        drawStaticBars(refCanvasRef, audioBuf.getChannelData(0), catColor, 0.45);
+        ac.close();
+      } catch {
+        // keep flat line on error
+      }
+    })();
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [referenceAudioSrc]);
+
+  function drawFlatOnCanvas(ref: React.RefObject<HTMLCanvasElement>, color: string) {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const W = canvas.clientWidth || 260;
+    canvas.width = W; canvas.height = 36;
+    ctx.clearRect(0, 0, W, 36);
+    ctx.strokeStyle = color;
+    ctx.setLineDash([3, 3]);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, 18); ctx.lineTo(W, 18); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawStaticBars(
+    ref: React.RefObject<HTMLCanvasElement>,
+    data: Float32Array,
+    color: string,
+    alpha = 0.85
+  ) {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const W = canvas.clientWidth || 260;
+    canvas.width = W; canvas.height = 36;
+    ctx.clearRect(0, 0, W, 36);
+    const step = 5;
+    const bars = Math.floor(W / step);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = alpha;
+    for (let i = 0; i < bars; i++) {
+      const idx = Math.floor((i / bars) * data.length);
+      const amp = Math.min(1, Math.abs(data[idx] || 0.05));
+      const h = Math.max(2, amp * 32);
+      ctx.fillRect(i * step, (36 - h) / 2, 3, h);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function animateRecord() {
+    if (!analyRef.current) return;
+    const buf = new Float32Array((analyRef.current as any).fftSize);
+    function frame() {
+      if (!analyRef.current) return;
+      (analyRef.current as any).getFloatTimeDomainData(buf);
+      drawStaticBars(userCanvasRef, buf, "#ef4444", 0.85);
+      rafRef.current = requestAnimationFrame(frame);
+    }
+    rafRef.current = requestAnimationFrame(frame);
+  }
+
+  async function startRecord() {
+    setError(false);
+    setScore(null);
+    setFeedback(null);
+    setEvalState("idle");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (AC) {
+        const ac = new AC();
+        const analyser = ac.createAnalyser();
+        analyser.fftSize = 256;
+        const src = ac.createMediaStreamSource(stream);
+        src.connect(analyser);
+        ctxRef.current   = ac;
+        analyRef.current = analyser;
+      }
+
+      const chunks: Blob[] = [];
+      const mr = new MediaRecorder(stream);
+      mr.ondataavailable = (e) => chunks.push(e.data);
+      mr.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        blobRef.current = blob;
+        const url = URL.createObjectURL(blob);
+        audioRef.current = new Audio(url);
+        audioRef.current.onloadedmetadata = () => {
+          setDuration(Math.round((audioRef.current?.duration ?? 0) * 10) / 10);
+        };
+        const final = new Float32Array(64);
+        if (analyRef.current) {
+          (analyRef.current as any).getFloatTimeDomainData(final);
+        }
+        drawStaticBars(userCanvasRef, final, catColor);
+        setState("done");
+        // Trigger Whisper evaluation automatically
+        evaluatePronunciation(blob);
+      };
+      mediaRef.current = mr;
+      mr.start();
+      setState("recording");
+      animateRecord();
+    } catch (_) {
+      setError(true);
+    }
+  }
+
+  async function evaluatePronunciation(blob: Blob) {
+    if (!targetText) return;
+    setEvalState("loading");
+    try {
+      const fd = new FormData();
+      fd.append("audio", blob, "recording.webm");
+      fd.append("target", targetText);
+
+      const res = await fetch("/api/ai/pronunciation", {
+        method: "POST",
+        body: fd,
+      });
+
+      if (!res.ok) throw new Error("API error");
+
+      const data = await res.json() as {
+        score: number;
+        feedback: { label: string; emoji: string; message: string };
+      };
+
+      setScore(data.score);
+      setFeedback(data.feedback);
+      setEvalState("done");
+      setRecordCount((c) => {
+        const next = c + 1;
+        savePracticeEntry(phraseKey, data.score, data.feedback.label, c);
+        return next;
+      });
+    } catch {
+      // Whisper failed — show retry, don't block the UI
+      setEvalState("idle");
+    }
+  }
+
+  function stopRecord() {
+    cancelAnimationFrame(rafRef.current);
+    mediaRef.current?.stop();
+  }
+
+  function playBack() {
+    if (!audioRef.current) return;
+    audioRef.current.currentTime = 0;
+    audioRef.current.play();
+  }
+
+  function reset() {
+    cancelAnimationFrame(rafRef.current);
+    mediaRef.current?.stop();
+    blobRef.current  = null;
+    audioRef.current = null;
+    setDuration(null);
+    setScore(null);
+    setFeedback(null);
+    setEvalState("idle");
+    setState("idle");
+    drawFlatOnCanvas(userCanvasRef, "rgba(255,255,255,0.12)");
+  }
+
+  // Score → ring color
+  function scoreColor(s: number): string {
+    if (s >= 85) return "#00e5b4";   // mint — perfect
+    if (s >= 60) return "#818cf8";   // violet — good
+    if (s >= 35) return "#f59e0b";   // amber — try again
+    return "#ef4444";                // red — restart
+  }
+
+  if (error) return null;
+
+  return (
+    <div className="mt-2 border border-b-dim rounded-xl overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-b-dim">
+        <span className="font-mono text-[8px] tracking-[0.16em] uppercase text-t400">Practice</span>
+        {duration !== null && (
+          <span className="font-mono text-[8px] text-t400">{duration}s recorded</span>
+        )}
+      </div>
+
+      {/* Waveform comparison */}
+      <div className="px-3 pt-2 pb-1 bg-s2 space-y-1">
+        {/* Aileen */}
+        <div className="flex items-center gap-2">
+          <span
+            className="font-mono text-[7px] tracking-[0.12em] uppercase w-10 flex-shrink-0"
+            style={{ color: `${catColor}80` }}
+          >
+            Aileen
+          </span>
+          <canvas ref={refCanvasRef} style={{ flex: 1, height: "32px", display: "block" }} />
+        </div>
+        <div style={{ height: "0.5px", background: "rgba(255,255,255,0.05)" }} />
+        {/* You */}
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[7px] tracking-[0.12em] uppercase w-10 flex-shrink-0 text-t400">
+            You
+          </span>
+          <canvas ref={userCanvasRef} style={{ flex: 1, height: "32px", display: "block" }} />
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        {state === "idle" && (
+          <button
+            onClick={startRecord}
+            className="flex items-center gap-1.5 font-mono text-[9px] tracking-[0.1em] uppercase px-3 py-1.5 rounded-lg border border-b-mid text-t300 hover:text-t100 hover:border-b-hi transition-all"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <circle cx="5" cy="5" r="3.5" fill="#ef4444" />
+            </svg>
+            Record
+          </button>
+        )}
+
+        {state === "recording" && (
+          <button
+            onClick={stopRecord}
+            className="flex items-center gap-1.5 font-mono text-[9px] tracking-[0.1em] uppercase px-3 py-1.5 rounded-lg border border-[rgba(239,68,68,0.4)] text-red-400 hover:bg-[rgba(239,68,68,0.06)] transition-all"
+          >
+            <span className="w-2 h-2 rounded-sm bg-red-400 animate-pulse" />
+            Stop
+          </button>
+        )}
+
+        {state === "done" && (
+          <>
+            <button
+              onClick={playBack}
+              className="flex items-center gap-1.5 font-mono text-[9px] tracking-[0.1em] uppercase px-3 py-1.5 rounded-lg border border-b-mid text-t300 hover:text-t100 transition-all"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M3 2l5 3-5 3V2z" fill="currentColor" />
+              </svg>
+              Play back
+            </button>
+            <button
+              onClick={reset}
+              className="font-mono text-[9px] tracking-[0.1em] uppercase px-3 py-1.5 rounded-lg border border-b-dim text-t400 hover:text-t300 transition-all"
+            >
+              Retry
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Evaluation result — shown after recording */}
+      {state === "done" && (
+        <div className="px-3 pb-3 border-t border-b-dim pt-2.5">
+          {evalState === "loading" && (
+            <div className="flex items-center gap-2">
+              <span
+                className="w-3 h-3 rounded-full border-2 border-t-transparent animate-spin"
+                style={{ borderColor: `${catColor}40`, borderTopColor: "transparent" }}
+              />
+              <span className="font-mono text-[8px] text-t400 tracking-[0.1em] uppercase">
+                Evaluating...
+              </span>
+            </div>
+          )}
+
+          {evalState === "done" && score !== null && feedback !== null && (
+            <div className="flex items-center gap-3">
+              {/* Score ring */}
+              <div className="relative flex-shrink-0 w-12 h-12">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                  {/* Background track */}
+                  <circle cx="24" cy="24" r="20" stroke="rgba(255,255,255,0.06)" strokeWidth="3.5" />
+                  {/* Score arc */}
+                  <circle
+                    cx="24" cy="24" r="20"
+                    stroke={scoreColor(score)}
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(score / 100) * 125.6} 125.6`}
+                    transform="rotate(-90 24 24)"
+                    style={{ transition: "stroke-dasharray 0.6s ease" }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span
+                    className="font-mono text-[11px] font-bold leading-none"
+                    style={{ color: scoreColor(score) }}
+                  >
+                    {score}
+                  </span>
+                  <span className="font-mono text-[6px] text-t400 leading-none mt-0.5">/ 100</span>
+                </div>
+              </div>
+
+              {/* Feedback text */}
+              <div className="flex-1 min-w-0">
+                <p
+                  className="font-mono text-[10px] font-bold mb-0.5"
+                  style={{ color: scoreColor(score) }}
+                >
+                  {feedback.emoji} {feedback.label}
+                </p>
+                <p className="font-mono text-[8.5px] text-t300 leading-[1.55]">
+                  {feedback.message}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Evaluation failed silently — show retry hint */}
+          {evalState === "idle" && state === "done" && (
+            <p className="font-mono text-[8px] text-t400">
+              평가를 불러오지 못했습니다. 다시 녹음해 주세요.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+} {
   const [state, setState]           = useState<"idle" | "recording" | "done">("idle");
   const [duration, setDuration]     = useState<number | null>(null);
   const [error, setError]           = useState(false);
