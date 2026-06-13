@@ -411,6 +411,7 @@ export default function LessonClient({ lesson }: Props) {
                       <PracticeRecorder
                         phraseKey={`${lesson.meta.id}-${relId}-ph${idx}`}
                         catColor={catColor}
+                        referenceAudioSrc={audioSrc}
                       />
                       <div className="px-3 py-2 rounded-lg bg-s2 mt-3">
                         <p className="font-mono text-[9px] text-t300 leading-[1.65]">{ph.why_it_works}</p>
@@ -551,7 +552,9 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const audioRef    = useRef<HTMLAudioElement | null>(null);
   const rafRef      = useRef<number>(0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const audioCtxRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const analyserRef = useRef<any>(null);
 
   const [playing,  setPlaying]  = useState(false);
@@ -560,7 +563,6 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
 
   useEffect(() => {
     drawBars(new Float32Array(64).fill(0.08), false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function drawBars(data: Float32Array, active: boolean) {
@@ -624,6 +626,7 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
       audioRef.current = audio;
 
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
         if (AC) {
           const ctx     = new AC();
@@ -641,6 +644,7 @@ function AudioPlayer({ src, catColor }: { src: string; catColor: string }) {
     }
 
     const audio = audioRef.current;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const actx = audioCtxRef.current as any;
     if (actx?.state === "suspended") await actx.resume();
 
@@ -941,45 +945,129 @@ function MiniQuiz({
 // ── Practice Recorder ─────────────────────────────────────────────
 // Mic recording + waveform comparison — no AI, no cost
 // Uses MediaRecorder API + Web Audio API only
+// ── localStorage helpers for practice self-assessment ────────────
+const PRACTICE_KEY = "aa_practice_v1";
+
+type AssessmentValue = "similar" | "different" | "retry";
+
+interface PracticeEntry {
+  lastAssessment: AssessmentValue;
+  timestamp: number;
+  recordCount: number;
+}
+
+function loadPracticeStore(): Record<string, PracticeEntry> {
+  try {
+    return JSON.parse(localStorage.getItem(PRACTICE_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function savePracticeEntry(phraseKey: string, assessment: AssessmentValue, prevCount: number) {
+  try {
+    const store = loadPracticeStore();
+    store[phraseKey] = {
+      lastAssessment: assessment,
+      timestamp: Date.now(),
+      recordCount: prevCount + 1,
+    };
+    localStorage.setItem(PRACTICE_KEY, JSON.stringify(store));
+  } catch {
+    // localStorage unavailable — fail silently
+  }
+}
+
+// ── PracticeRecorder ──────────────────────────────────────────────
 function PracticeRecorder({
   phraseKey,
   catColor,
+  referenceAudioSrc,
 }: {
   phraseKey: string;
   catColor: string;
+  referenceAudioSrc?: string;
 }) {
-  const [state, setState]       = useState<"idle" | "recording" | "done">("idle");
-  const [duration, setDuration] = useState<number | null>(null);
-  const [error, setError]       = useState(false);
+  const [state, setState]           = useState<"idle" | "recording" | "done">("idle");
+  const [duration, setDuration]     = useState<number | null>(null);
+  const [error, setError]           = useState(false);
+  const [assessment, setAssessment] = useState<AssessmentValue | null>(null);
+  const [recordCount, setRecordCount] = useState<number>(0);
 
-  const canvasRef  = useRef<HTMLCanvasElement>(null);
+  // Two separate canvases: reference (Aileen) + user recording
+  const refCanvasRef  = useRef<HTMLCanvasElement>(null);
+  const userCanvasRef = useRef<HTMLCanvasElement>(null);
+
   const mediaRef   = useRef<any>(null);
   const blobRef    = useRef<Blob | null>(null);
   const audioRef   = useRef<HTMLAudioElement | null>(null);
   const rafRef     = useRef<number>(0);
   const ctxRef     = useRef<any>(null);
   const analyRef   = useRef<any>(null);
-  const startRef   = useRef<number>(0);
 
-  // draw flat line on mount
-  useEffect(() => { drawFlat(); }, []);
+  // Load previous record count on mount
+  useEffect(() => {
+    const store = loadPracticeStore();
+    if (store[phraseKey]) {
+      setRecordCount(store[phraseKey].recordCount);
+      setAssessment(store[phraseKey].lastAssessment);
+    }
+  }, [phraseKey]);
 
-  function drawFlat() {
-    const canvas = canvasRef.current;
+  // Pre-compute Aileen reference waveform on mount
+  useEffect(() => {
+    drawFlatOnCanvas(refCanvasRef, "rgba(255,255,255,0.08)");
+    drawFlatOnCanvas(userCanvasRef, "rgba(255,255,255,0.12)");
+
+    if (!referenceAudioSrc) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (!AC) return;
+        const res = await fetch(referenceAudioSrc);
+        if (!res.ok || cancelled) return;
+        const arrayBuf = await res.arrayBuffer();
+        if (cancelled) return;
+        const ac = new AC();
+        const audioBuf = await ac.decodeAudioData(arrayBuf);
+        if (cancelled) return;
+        // Downsample channel data to waveform bars
+        const raw = audioBuf.getChannelData(0);
+        drawStaticBars(refCanvasRef, raw, catColor, 0.45);
+        ac.close();
+      } catch {
+        // Network or decode error — keep flat line
+      }
+    })();
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [referenceAudioSrc]);
+
+  function drawFlatOnCanvas(ref: React.RefObject<HTMLCanvasElement>, color: string) {
+    const canvas = ref.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const W = canvas.clientWidth || 260;
     canvas.width = W; canvas.height = 36;
     ctx.clearRect(0, 0, W, 36);
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.strokeStyle = color;
     ctx.setLineDash([3, 3]);
+    ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, 18); ctx.lineTo(W, 18); ctx.stroke();
     ctx.setLineDash([]);
   }
 
-  function drawBars(data: Float32Array, color: string) {
-    const canvas = canvasRef.current;
+  function drawStaticBars(
+    ref: React.RefObject<HTMLCanvasElement>,
+    data: Float32Array,
+    color: string,
+    alpha = 0.85
+  ) {
+    const canvas = ref.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -989,7 +1077,7 @@ function PracticeRecorder({
     const step = 5;
     const bars = Math.floor(W / step);
     ctx.fillStyle = color;
-    ctx.globalAlpha = 0.85;
+    ctx.globalAlpha = alpha;
     for (let i = 0; i < bars; i++) {
       const idx = Math.floor((i / bars) * data.length);
       const amp = Math.min(1, Math.abs(data[idx] || 0.05));
@@ -999,13 +1087,17 @@ function PracticeRecorder({
     ctx.globalAlpha = 1;
   }
 
+  function drawLiveUserBars(data: Float32Array, color: string) {
+    drawStaticBars(userCanvasRef, data, color, 0.85);
+  }
+
   function animateRecord() {
     if (!analyRef.current) return;
     const buf = new Float32Array((analyRef.current as any).fftSize);
     function frame() {
       if (!analyRef.current) return;
       (analyRef.current as any).getFloatTimeDomainData(buf);
-      drawBars(buf, "#ef4444");
+      drawLiveUserBars(buf, "#ef4444");
       rafRef.current = requestAnimationFrame(frame);
     }
     rafRef.current = requestAnimationFrame(frame);
@@ -1013,16 +1105,17 @@ function PracticeRecorder({
 
   async function startRecord() {
     setError(false);
+    setAssessment(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
       if (AC) {
-        const ctx = new AC();
-        const analyser = ctx.createAnalyser();
+        const ac = new AC();
+        const analyser = ac.createAnalyser();
         analyser.fftSize = 256;
-        const src = ctx.createMediaStreamSource(stream);
+        const src = ac.createMediaStreamSource(stream);
         src.connect(analyser);
-        ctxRef.current  = ctx;
+        ctxRef.current   = ac;
         analyRef.current = analyser;
       }
 
@@ -1038,16 +1131,16 @@ function PracticeRecorder({
         audioRef.current.onloadedmetadata = () => {
           setDuration(Math.round((audioRef.current?.duration ?? 0) * 10) / 10);
         };
+        // Snapshot the live waveform at stop
         const final = new Float32Array(64);
         if (analyRef.current) {
           (analyRef.current as any).getFloatTimeDomainData(final);
         }
-        drawBars(final, catColor);
+        drawStaticBars(userCanvasRef, final, catColor);
         setState("done");
       };
       mediaRef.current = mr;
       mr.start();
-      startRef.current = Date.now();
       setState("recording");
       animateRecord();
     } catch (_) {
@@ -1072,11 +1165,28 @@ function PracticeRecorder({
     blobRef.current  = null;
     audioRef.current = null;
     setDuration(null);
+    setAssessment(null);
     setState("idle");
-    drawFlat();
+    drawFlatOnCanvas(userCanvasRef, "rgba(255,255,255,0.12)");
+  }
+
+  function handleAssessment(value: AssessmentValue) {
+    setAssessment(value);
+    savePracticeEntry(phraseKey, value, recordCount);
+    setRecordCount((c) => c + 1);
+    // If user taps "retry", auto-reset after a brief moment
+    if (value === "retry") {
+      setTimeout(() => reset(), 300);
+    }
   }
 
   if (error) return null;
+
+  const ASSESS_BUTTONS: { value: AssessmentValue; label: string }[] = [
+    { value: "similar",   label: "비슷해요" },
+    { value: "different", label: "조금 달라요" },
+    { value: "retry",     label: "다시 해볼게요" },
+  ];
 
   return (
     <div className="mt-2 border border-b-dim rounded-xl overflow-hidden">
@@ -1088,15 +1198,34 @@ function PracticeRecorder({
         )}
       </div>
 
-      {/* Waveform canvas */}
-      <div className="px-3 py-2 bg-s2">
-        <canvas
-          ref={canvasRef}
-          style={{ width: "100%", height: "36px", display: "block" }}
-        />
+      {/* Waveform comparison — Aileen on top, user below */}
+      <div className="px-3 pt-2 pb-1 bg-s2 space-y-1">
+        {/* Aileen reference */}
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[7px] tracking-[0.12em] uppercase w-10 flex-shrink-0"
+            style={{ color: `${catColor}80` }}>
+            Aileen
+          </span>
+          <canvas
+            ref={refCanvasRef}
+            style={{ flex: 1, height: "32px", display: "block" }}
+          />
+        </div>
+        {/* Divider */}
+        <div style={{ height: "0.5px", background: "rgba(255,255,255,0.05)" }} />
+        {/* User recording */}
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[7px] tracking-[0.12em] uppercase w-10 flex-shrink-0 text-t400">
+            You
+          </span>
+          <canvas
+            ref={userCanvasRef}
+            style={{ flex: 1, height: "32px", display: "block" }}
+          />
+        </div>
       </div>
 
-      {/* Controls */}
+      {/* Playback / record controls */}
       <div className="flex items-center gap-2 px-3 py-2.5">
         {state === "idle" && (
           <button
@@ -1140,6 +1269,42 @@ function PracticeRecorder({
           </>
         )}
       </div>
+
+      {/* Self-assessment — shown only after recording */}
+      {state === "done" && (
+        <div className="px-3 pb-3 border-t border-b-dim pt-2.5">
+          <p className="font-mono text-[8px] tracking-[0.12em] uppercase text-t400 mb-2">
+            어떻게 들렸나요?
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {ASSESS_BUTTONS.map(({ value, label }) => {
+              const isSelected = assessment === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => handleAssessment(value)}
+                  className="font-mono text-[9px] tracking-[0.08em] px-3 py-1.5 rounded-lg border transition-all"
+                  style={
+                    isSelected
+                      ? {
+                          background: `${catColor}18`,
+                          borderColor: `${catColor}60`,
+                          color: catColor,
+                        }
+                      : {
+                          background: "transparent",
+                          borderColor: "rgba(255,255,255,0.1)",
+                          color: "rgba(255,255,255,0.45)",
+                        }
+                  }
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
