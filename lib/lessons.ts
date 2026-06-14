@@ -21,10 +21,10 @@ const REGISTRY: Record<string, Lesson> = {
   DT_001,
   DL_005,
   DL_006,
+  WP_002,
   WP_004,
   // FM_002,  // preparing
   // WP_001,  // preparing
-  // WP_002,  // preparing
   // WP_003,  // preparing — Group Dinner (회식) Dynamics
   // DL_001,  // preparing
 };
