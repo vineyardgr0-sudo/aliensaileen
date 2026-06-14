@@ -1,10 +1,13 @@
 "use client";
-import type { DecisionVariant, DecisionOption } from "@/types/lesson";
+import type { DecisionVariant, DecisionOption, LessonTag } from "@/types/lesson";
 
-const TAG = {
+const TAG: Record<LessonTag, { card: string; text: string; pill: string }> = {
   correct: { card: "bg-mint/[0.07] border-mint/40", text: "text-mint", pill: "bg-mint/[0.14] text-mint" },
   wrong:   { card: "bg-red-500/[0.05] border-red-500/20", text: "text-red-400/80", pill: "bg-red-500/[0.12] text-red-400/90" },
   neutral: { card: "bg-white/[0.04] border-white/[0.14]", text: "text-t300", pill: "bg-white/[0.10] text-t300" },
+  acceptable: { card: "bg-mint/[0.05] border-mint/30", text: "text-mint/90", pill: "bg-mint/[0.10] text-mint/90" },
+  awkward: { card: "bg-amber-500/[0.05] border-amber-500/20", text: "text-amber-400/90", pill: "bg-amber-500/[0.12] text-amber-400/90" },
+  inappropriate: { card: "bg-red-500/[0.05] border-red-500/20", text: "text-red-400/80", pill: "bg-red-500/[0.12] text-red-400/90" },
 };
 
 interface Props { variant: DecisionVariant; done: boolean; chosen: DecisionOption | null; onChoose: (opt: DecisionOption) => void }

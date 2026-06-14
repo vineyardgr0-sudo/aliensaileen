@@ -92,7 +92,7 @@ export default function LessonClient({ lesson }: Props) {
     setQuizScores(scores);
     const correct = scores.filter(Boolean).length;
     const score   = scores.length > 0 ? correct / scores.length : 0;
-    const decCorrect = chosenOpt?.tag === "correct";
+    const decCorrect = chosenOpt?.tag === "correct" || chosenOpt?.tag === "acceptable";
     progressStore.markComplete(lesson.meta.id, score, decCorrect);
     refresh();
     setTimeout(() => goStep(8), 400);
@@ -265,7 +265,7 @@ export default function LessonClient({ lesson }: Props) {
                         "w-full text-left px-4 py-4 rounded-xl border transition-all",
                         chosenOpt
                           ? opt === chosenOpt
-                            ? opt.tag === "correct"
+                            ? (opt.tag === "correct" || opt.tag === "acceptable")
                               ? "border-[rgba(16,185,129,0.5)] bg-[rgba(16,185,129,0.07)]"
                               : "border-[rgba(239,68,68,0.4)] bg-[rgba(239,68,68,0.06)]"
                             : "border-b-dim opacity-40"
@@ -277,7 +277,7 @@ export default function LessonClient({ lesson }: Props) {
                         "font-syne text-[17px] font-bold",
                         chosenOpt
                           ? opt === chosenOpt
-                            ? opt.tag === "correct" ? "text-emerald-400" : "text-red-400"
+                            ? (opt.tag === "correct" || opt.tag === "acceptable") ? "text-emerald-400" : "text-red-400"
                             : "text-t400"
                           : "text-t100"
                       )}>
@@ -286,7 +286,7 @@ export default function LessonClient({ lesson }: Props) {
                       {chosenOpt === opt && (
                         <p className="font-mono text-[9px] mt-1.5 leading-[1.6]"
                           style={{
-                            color: opt.tag === "correct" ? "rgba(52,211,153,0.8)" : "rgba(252,165,165,0.8)"
+                            color: (opt.tag === "correct" || opt.tag === "acceptable") ? "rgba(52,211,153,0.8)" : "rgba(252,165,165,0.8)"
                           }}>
                           {opt.feedback}
                         </p>
@@ -306,15 +306,15 @@ export default function LessonClient({ lesson }: Props) {
               {/* Result banner */}
               <div className={cn(
                 "rounded-2xl p-5 border",
-                chosenOpt.tag === "correct"
+                (chosenOpt.tag === "correct" || chosenOpt.tag === "acceptable")
                   ? "bg-[rgba(16,185,129,0.07)] border-[rgba(16,185,129,0.3)]"
                   : "bg-[rgba(239,68,68,0.06)] border-[rgba(239,68,68,0.25)]"
               )}>
                 <p className={cn(
                   "font-syne text-[18px] font-extrabold mb-2",
-                  chosenOpt.tag === "correct" ? "text-emerald-400" : "text-red-400"
+                  (chosenOpt.tag === "correct" || chosenOpt.tag === "acceptable") ? "text-emerald-400" : "text-red-400"
                 )}>
-                  {chosenOpt.tag === "correct" ? "✓ Correct" : "✗ Not quite"}
+                  {(chosenOpt.tag === "correct" || chosenOpt.tag === "acceptable") ? "✓ Correct" : "✗ Not quite"}
                 </p>
                 <p className="font-mono text-[10px] text-t300 leading-[1.7]">{chosenOpt.feedback}</p>
                 {chosenOpt.explanation && (
@@ -343,10 +343,14 @@ export default function LessonClient({ lesson }: Props) {
                     Why it sounds that way
                   </p>
                   {decVariant.options.map((opt, i) => {
-                    const isNatural  = opt.tag === "correct";
-                    const isCasual   = opt.tag === "neutral";
-                    const isFormal   = opt.tag === "wrong" && !isCasual;
-                    const tagLabel   = isNatural ? "Natural" : isCasual ? "Too casual" : "Too formal";
+                    const isNatural  = opt.tag === "correct" || opt.tag === "acceptable";
+                    const isCasual   = opt.tag === "neutral" || opt.tag === "awkward";
+                    const isFormal   = (opt.tag === "wrong" || opt.tag === "inappropriate") && !isCasual;
+                    const tagLabel   = opt.tag === "correct" ? "Natural" :
+                                       opt.tag === "acceptable" ? "Acceptable" :
+                                       opt.tag === "neutral" ? "Too casual" :
+                                       opt.tag === "awkward" ? "Awkward" :
+                                       opt.tag === "inappropriate" ? "Inappropriate" : "Too formal";
                     const tagStyle   = isNatural
                       ? { background: "rgba(16,185,129,0.12)", color: "#34d399" }
                       : isCasual
