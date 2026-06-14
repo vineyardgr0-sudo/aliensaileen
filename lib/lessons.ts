@@ -4,6 +4,7 @@ import BM_001 from "@/data/lessons/BM_001";
 import DT_001 from "@/data/lessons/DT_001";
 import DL_005 from "@/data/lessons/DL_005";
 import DL_006 from "@/data/lessons/DL_006";
+import WP_002 from "@/data/lessons/WP_002";
 import WP_004 from "@/data/lessons/WP_004";
 
 // ── LESSON REGISTRY ──────────────────────────────────────────────

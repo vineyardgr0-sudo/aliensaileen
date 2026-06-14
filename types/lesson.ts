@@ -3,7 +3,7 @@
 // Stable from MVP → Phase 2 AI → Phase 3 Speech
 // ═══════════════════════════════════════════════════════════════
 
-export type LessonTag = "correct" | "neutral" | "wrong";
+export type LessonTag = "correct" | "neutral" | "wrong" | "acceptable" | "awkward" | "inappropriate";
 export type LessonCategory = "fan_meeting" | "dating" | "workplace" | "daily";
 export type LessonLevel = "beginner" | "intermediate" | "advanced";
 export type LessonStatus = "live" | "preparing";
